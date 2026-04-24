@@ -1,0 +1,112 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/index/home",
+      "style": {
+        "navigationBarTitleText": "",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/index/user",
+      "style": {
+        "navigationBarTitleText": "个人"
+      }
+    },
+    {
+      "path": "pages/index/message",
+      "style": {
+        "navigationBarTitleText": "消息"
+      }
+    },
+    {
+      "path": "pages/index/classify",
+      "style": {
+        "navigationBarTitleText": "分类"
+      }
+    },
+    {
+      "path": "pages/index/webview",
+      "style": {
+        "navigationBarTitleText": ""
+      }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "package",
+      "pages": [
+        {
+          "path": "pages/position/search",
+          "style": {
+            "navigationBarTitleText": "搜索",
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
+          "path": "pages/login/login",
+          "style": {
+            "navigationBarTitleText": "登录",
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
+          "path": "pages/index/detail",
+          "style": {
+            "navigationBarTitleText": "商品详情"
+          }
+        },
+        {
+          "path": "pages/index/release",
+          "style": {
+            "navigationBarTitleText": "发布闲置"
+          }
+        }
+      ]
+    }
+  ],
+  "tabBar": {
+    "color": "#999",
+    "selectedColor": "#FF6B35",
+    "borderStyle": "white",
+    "backgroundColor": "#fff",
+    "list": [
+      {
+        "pagePath": "pages/index/home",
+        "iconPath": "static/index/home.png",
+        "selectedIconPath": "static/index/home_active.png",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/index/classify",
+        "iconPath": "static/index/classify.png",
+        "selectedIconPath": "static/index/classify_active.png",
+        "text": "分类"
+      },
+      {
+        "pagePath": "pages/index/message",
+        "iconPath": "static/index/message.png",
+        "selectedIconPath": "static/index/message_active.png",
+        "text": "消息"
+      },
+      {
+        "pagePath": "pages/index/user",
+        "iconPath": "static/index/user.png",
+        "selectedIconPath": "static/index/user_active.png",
+        "text": "个人"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "闫万鹏",
+    "navigationBarBackgroundColor": "#FF6B35",
+    "backgroundColor": "#FF6B35"
+  }
+}
