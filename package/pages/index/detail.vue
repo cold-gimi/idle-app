@@ -1,13 +1,16 @@
 <template>
 	<view class="detail-page">
-		<!-- 商品图片轮播 -->
-		<view class="image-section">
-			<swiper class="swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500" indicator-color="rgba(255,255,255,0.6)" indicator-active-color="#FF6B35">
-				<swiper-item v-for="(img, index) in auctionDetail.images" :key="index">
-					<image class="swiper-image" :src="img" mode="aspectFit"></image>
-				</swiper-item>
-			</swiper>
-		</view>
+		<u-loading-page :loading="isLoading" loading-text="加载中..." v-if="isLoading"></u-loading-page>
+		
+		<view v-else>
+			<!-- 商品图片轮播 -->
+			<view class="image-section">
+				<swiper class="swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500" indicator-color="rgba(255,255,255,0.6)" indicator-active-color="#FF6B35">
+					<swiper-item v-for="(img, index) in currentAuction.images" :key="index">
+						<image class="swiper-image" :src="img" mode="aspectFit"></image>
+					</swiper-item>
+				</swiper>
+			</view>
 
 		<!-- 倒计时和拍卖状态 -->
 		<view class="countdown-card">
@@ -52,19 +55,19 @@
 					<text class="increment-price">加价幅度 ¥{{ auctionStatus.increment }}</text>
 				</view>
 			</view>
-			<text class="goods-title">{{ auctionDetail.title }}</text>
+			<text class="goods-title">{{ currentAuction.title }}</text>
 			<view class="meta-row">
 				<view class="meta-item">
 					<u-icon name="map-fill" color="#999" size="24"></u-icon>
-					<text>距离 {{ auctionDetail.distance }}</text>
+					<text>距离 {{ currentAuction.distance }}</text>
 				</view>
 				<view class="meta-item">
 					<u-icon name="clock-fill" color="#999" size="24"></u-icon>
-					<text>{{ auctionDetail.time }}</text>
+					<text>{{ currentAuction.time }}</text>
 				</view>
 				<view class="meta-item">
 					<u-icon name="eye-fill" color="#999" size="24"></u-icon>
-					<text>浏览 {{ auctionDetail.views }}次</text>
+					<text>浏览 {{ currentAuction.views }}次</text>
 				</view>
 			</view>
 
@@ -75,11 +78,11 @@
 					<text class="stat-label">出价次数</text>
 				</view>
 				<view class="stat-item">
-					<text class="stat-num">{{ auctionDetail.wantCount || 0 }}</text>
+					<text class="stat-num">{{ currentAuction.wantCount || 0 }}</text>
 					<text class="stat-label">想买</text>
 				</view>
 				<view class="stat-item">
-					<text class="stat-num">{{ auctionDetail.collectCount || 0 }}</text>
+					<text class="stat-num">{{ currentAuction.collectCount || 0 }}</text>
 					<text class="stat-label">收藏</text>
 				</view>
 			</view>
@@ -130,11 +133,12 @@
 				<u-icon name="file-text-fill" color="#333" size="28"></u-icon>
 				<text>商品描述</text>
 			</view>
-			<text class="desc-content">{{ auctionDetail.description }}</text>
+			<text class="desc-content">{{ currentAuction.description }}</text>
 		</view>
 
 		<!-- 底部占位 -->
 		<view class="bottom-placeholder"></view>
+		</view>
 
 		<!-- 出价键盘弹窗 -->
 		<u-popup :show="showBidKeyboard" mode="bottom" @close="closeBidKeyboard" :safe-area-inset-bottom="true">
@@ -251,17 +255,8 @@ export default {
 			bidMessage: '',
 			bidError: '',
 			isSubmitting: false,
-			quickAddAmounts: [1, 5, 10, 50, 100],
-			auctionDetail: {
-				images: ['/static/image/phone.png', '/static/image/phone.png', '/static/image/phone.png'],
-				title: 'iPhone 15 Pro Max 256GB 原色钛金属',
-				distance: '120m',
-				time: '10分钟前',
-				views: 328,
-				wantCount: 128,
-				collectCount: 56,
-				description: 'iPhone 15 Pro Max 256GB 原色钛金属，几乎全新。购买不到半年因个人原因转手。所有原装配件齐全包装盒也在。'
-			}
+			isLoading: true,
+			quickAddAmounts: [1, 5, 10, 50, 100]
 		}
 	},
 	computed: {
@@ -311,6 +306,7 @@ export default {
 		}
 	},
 	onLoad(options) {
+		this.isLoading = true
 		if (options.id) {
 			this.auctionId = options.id
 			this.loadAuctionDetail(options.id)
@@ -345,76 +341,80 @@ export default {
 			return this.$utils.getTimeAgo(timestamp)
 		},
 		loadMockData() {
-			const mockAuction = {
-				id: 'mock_1',
-				title: 'iPhone 15 Pro Max 256GB 原色钛金属',
-				images: ['/static/image/phone.png', '/static/image/phone.png', '/static/image/phone.png'],
-				status: 'active',
-				remainingTime: 3600,
-				currentPrice: 6888,
-				startPrice: 5000,
-				increment: 100,
-				bidCount: 12,
-				highestBidder: {
-					id: 'user_1',
-					name: '数码爱好者',
-					avatarBg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-				},
-				distance: '120m',
-				time: '10分钟前',
-				views: 328,
-				wantCount: 128,
-				collectCount: 56,
-				description: 'iPhone 15 Pro Max 256GB 原色钛金属，几乎全新。购买不到半年因个人原因转手。所有原装配件齐全包装盒也在。'
-			}
-			this.$store.commit('setCurrentAuction', mockAuction)
-			this.$store.commit('updateAuctionStatus', {
-				isActive: mockAuction.status === 'active',
-				remainingTime: mockAuction.remainingTime,
-				currentPrice: mockAuction.currentPrice,
-				startPrice: mockAuction.startPrice,
-				increment: mockAuction.increment,
-				bidCount: mockAuction.bidCount,
-				highestBidder: mockAuction.highestBidder
-			})
-			const mockHistory = [
-				{
-					id: 1,
-					auctionId: 'mock_1',
-					price: 6888,
-					userId: 'user_1',
-					username: '数码爱好者',
-					avatarBg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-					createTime: Date.now() - 60000,
-					status: 'success',
-					message: '诚心要，能自提'
-				},
-				{
-					id: 2,
-					auctionId: 'mock_1',
-					price: 6700,
-					userId: 'user_2',
-					username: '手机收藏家',
-					avatarBg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-					createTime: Date.now() - 300000,
-					status: 'success'
-				},
-				{
-					id: 3,
-					auctionId: 'mock_1',
-					price: 6500,
-					userId: 'user_3',
-					username: '阿杰数码',
-					avatarBg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-					createTime: Date.now() - 600000,
-					status: 'success'
+			try {
+				const mockAuction = {
+					id: 'mock_1',
+					title: 'iPhone 15 Pro Max 256GB 原色钛金属',
+					images: ['/static/image/phone.png', '/static/image/phone.png', '/static/image/phone.png'],
+					status: 'active',
+					remainingTime: 3600,
+					currentPrice: 6888,
+					startPrice: 5000,
+					increment: 100,
+					bidCount: 12,
+					highestBidder: {
+						id: 'user_1',
+						name: '数码爱好者',
+						avatarBg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+					},
+					distance: '120m',
+					time: '10分钟前',
+					views: 328,
+					wantCount: 128,
+					collectCount: 56,
+					description: 'iPhone 15 Pro Max 256GB 原色钛金属，几乎全新。购买不到半年因个人原因转手。所有原装配件齐全包装盒也在。'
 				}
-			]
-			this.$store.commit('setBidHistory', mockHistory)
-			this.$store.dispatch('startCountdown', {
-				auctionId: 'mock_1',
-				remainingTime: mockAuction.remainingTime
-			})
+				this.$store.commit('setCurrentAuction', mockAuction)
+				this.$store.commit('updateAuctionStatus', {
+					isActive: mockAuction.status === 'active',
+					remainingTime: mockAuction.remainingTime,
+					currentPrice: mockAuction.currentPrice,
+					startPrice: mockAuction.startPrice,
+					increment: mockAuction.increment,
+					bidCount: mockAuction.bidCount,
+					highestBidder: mockAuction.highestBidder
+				})
+				const mockHistory = [
+					{
+						id: 1,
+						auctionId: 'mock_1',
+						price: 6888,
+						userId: 'user_1',
+						username: '数码爱好者',
+						avatarBg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+						createTime: Date.now() - 60000,
+						status: 'success',
+						message: '诚心要，能自提'
+					},
+					{
+						id: 2,
+						auctionId: 'mock_1',
+						price: 6700,
+						userId: 'user_2',
+						username: '手机收藏家',
+						avatarBg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+						createTime: Date.now() - 300000,
+						status: 'success'
+					},
+					{
+						id: 3,
+						auctionId: 'mock_1',
+						price: 6500,
+						userId: 'user_3',
+						username: '阿杰数码',
+						avatarBg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+						createTime: Date.now() - 600000,
+						status: 'success'
+					}
+				]
+				this.$store.commit('setBidHistory', mockHistory)
+				this.$store.dispatch('startCountdown', {
+					auctionId: 'mock_1',
+					remainingTime: mockAuction.remainingTime
+				})
+			} finally {
+				this.isLoading = false
+			}
 		},
 		async loadAuctionDetail(id) {
 			try {
@@ -429,6 +429,8 @@ export default {
 			} catch (error) {
 				console.error('加载拍卖详情失败:', error)
 				this.$utils.toast('加载失败，请重试')
+			} finally {
+				this.isLoading = false
 			}
 		},
 		toggleCollect() {
