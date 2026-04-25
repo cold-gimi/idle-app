@@ -19,6 +19,7 @@
 			:input-align="'center'"
 			:show-action="false"
 			@search="onSearch"
+			@click="goSearchPage"
 		></u-search>
 		</view>
 
@@ -304,7 +305,14 @@ export default {
 	},
 	methods: {
 		onSearch(val) {
-			this.$utils.toast(`搜索: ${val}`)
+			if (val && val.trim()) {
+				this.$utils.route('/package/pages/search/search', { keyword: val })
+			} else {
+				this.goSearchPage()
+			}
+		},
+		goSearchPage() {
+			this.$utils.route('/package/pages/search/search')
 		},
 		changeLocation() {
 			this.$utils.toast('切换位置')

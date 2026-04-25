@@ -43,6 +43,14 @@
       "root": "package",
       "pages": [
         {
+          "path": "pages/search/search",
+          "style": {
+            "navigationBarTitleText": "搜索",
+            "navigationStyle": "custom",
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
           "path": "pages/position/search",
           "style": {
             "navigationBarTitleText": "搜索",
