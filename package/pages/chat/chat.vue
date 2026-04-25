@@ -14,6 +14,7 @@
 					:id="`msg-${index}`"
 					class="message-item"
 					:class="{ 'message-right': message.isSelf }"
+					@longpress="showMessageMenu(message, index)"
 				>
 					<!-- 头像 -->
 					<view class="avatar" :style="{ background: message.avatarBg || '#FF6B35' }">
@@ -47,7 +48,7 @@
 								<view class="message-video" @click="playVideo(message.content)">
 									<image 
 										class="video-thumbnail" 
-										:src="message.thumbnail || '/static/image/video_placeholder.png'" 
+										:src="message.thumbnail || '/static/image/phs.png'" 
 										mode="aspectFill"
 									></image>
 									<view class="play-icon">
@@ -64,6 +65,13 @@
 										<view class="wave-item" v-for="i in 3" :key="i"></view>
 									</view>
 									<text class="voice-duration">{{ message.duration || '0"' }}</text>
+								</view>
+							</template>
+							
+							<!-- 撤回消息 -->
+							<template v-else-if="message.type === 'recall'">
+								<view class="message-recall">
+									<text class="recall-text">{{ message.content }}</text>
 								</view>
 							</template>
 						</view>
@@ -146,11 +154,18 @@
 						<text class="tool-label">视频</text>
 					</view>
 					
-					<view class="tool-item" @click="toggleVoiceRecording">
-						<view class="tool-icon" :class="{ 'recording': isRecording }">
+					<view class="tool-item">
+						<view 
+							class="tool-icon voice-btn" 
+							:class="{ 'recording': isRecording, 'cancel-area': isInCancelArea }"
+							@touchstart="onVoiceTouchStart"
+							@touchmove="onVoiceTouchMove"
+							@touchend="onVoiceTouchEnd"
+							@touchcancel="onVoiceTouchEnd"
+						>
 							<u-icon name="mic" :color="isRecording ? '#ff4d4f' : '#52c41a'" size="48"></u-icon>
 						</view>
-						<text class="tool-label">{{ isRecording ? '停止录音' : '语音' }}</text>
+						<text class="tool-label">{{ isRecording ? '松开结束' : '按住录音' }}</text>
 					</view>
 					
 					<view class="tool-item" @click="chooseLocation">
@@ -164,12 +179,29 @@
 		</view>
 		
 		<!-- 录音提示 -->
-		<view class="recording-tip" v-if="isRecording">
-			<view class="recording-icon">
-				<u-icon name="mic" color="#fff" size="60"></u-icon>
+		<view class="recording-tip" v-if="isRecording" :class="{ 'cancel-mode': isInCancelArea }">
+			<view class="recording-icon" :class="{ 'cancel': isInCancelArea }">
+				<u-icon :name="isInCancelArea ? 'minus-circle' : 'mic'" color="#fff" size="60"></u-icon>
 			</view>
-			<text class="recording-text">正在录音... {{ recordingTime }}s</text>
-			<text class="recording-hint">上滑取消录音</text>
+			<text class="recording-text">{{ isInCancelArea ? '松开手指取消' : `正在录音... ${recordingTime}s` }}</text>
+			<text class="recording-hint">{{ isInCancelArea ? '向下滑动继续录音' : '上滑取消录音' }}</text>
+		</view>
+		
+		<!-- 消息操作菜单 -->
+		<view class="message-menu-mask" v-if="showMessageMenu" @click="hideMessageMenu"></view>
+		<view class="message-menu" v-if="showMessageMenu">
+			<view class="menu-item" v-if="canRecall(selectedMessage)" @click="recallMessage">
+				<u-icon name="info-circle" color="#333" size="40"></u-icon>
+				<text class="menu-text">撤回</text>
+			</view>
+			<view class="menu-item" v-if="selectedMessage.type === 'text'" @click="copyMessage">
+				<u-icon name="copy" color="#333" size="40"></u-icon>
+				<text class="menu-text">复制</text>
+			</view>
+			<view class="menu-item" @click="deleteMessage">
+				<u-icon name="trash" color="#ff4d4f" size="40"></u-icon>
+				<text class="menu-text" style="color: #ff4d4f;">删除</text>
+			</view>
 		</view>
 	</view>
 </template>
@@ -207,7 +239,19 @@ export default {
 			scrollToView: '',
 			
 			// 表情列表
-			emojiList: ['😀', '😂', '😊', '🥰', '😎', '🤔', '😘', '👍', '👎', '👏', '🙏', '💪', '❤️', '🔥', '🎉', '👍', '😍', '🤣', '😊', '🙂', '😉', '😇', '🥳', '😎', '🤩', '😋', '🤗', '🤔', '🤐', '🤫', '🤭', '🤫', '😏', '😒', '🙄', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '👻', '👽', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤']
+			emojiList: ['😀', '😂', '😊', '🥰', '😎', '🤔', '😘', '👍', '👎', '👏', '🙏', '💪', '❤️', '🔥', '🎉', '👍', '😍', '🤣', '😊', '🙂', '😉', '😇', '🥳', '😎', '🤩', '😋', '🤗', '🤔', '🤐', '🤫', '🤭', '🤫', '😏', '😒', '🙄', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '👻', '👽', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤'],
+			
+			// 消息菜单
+			showMessageMenu: false,
+			selectedMessage: null,
+			selectedMessageIndex: -1,
+			
+			// 撤回时间限制（2分钟）
+			recallTimeLimit: 120000,
+			
+			// 语音录制相关
+			isInCancelArea: false,
+			voiceStartY: 0
 		};
 	},
 	onLoad(options) {
@@ -494,18 +538,61 @@ export default {
 		
 		// 播放视频
 		playVideo(videoPath) {
-			uni.navigateTo({
-				url: `/package/pages/chat/video-player?url=${encodeURIComponent(videoPath)}`
+			uni.previewVideo({
+				url: videoPath,
+				fail: (error) => {
+					console.error('视频预览失败:', error);
+					// 如果previewVideo失败，尝试使用其他方式
+					uni.showModal({
+						title: '提示',
+						content: '视频预览失败，是否使用系统播放器打开？',
+						success: (res) => {
+							if (res.confirm) {
+								uni.openVideo({
+									url: videoPath,
+									fail: (err) => {
+										console.error('打开视频失败:', err);
+										this.$utils.toast('无法打开视频');
+									}
+								});
+							}
+						}
+					});
+				}
 			});
 		},
 		
-		// 切换录音
-		toggleVoiceRecording() {
-			if (this.isRecording) {
-				this.stopRecording();
+		// 语音触摸开始
+		onVoiceTouchStart(e) {
+			this.voiceStartY = e.touches[0].clientY;
+			this.isInCancelArea = false;
+			this.startRecording();
+		},
+		
+		// 语音触摸移动
+		onVoiceTouchMove(e) {
+			if (!this.isRecording) return;
+			
+			const currentY = e.touches[0].clientY;
+			const moveDistance = this.voiceStartY - currentY;
+			
+			// 上滑超过100px进入取消区域
+			this.isInCancelArea = moveDistance > 100;
+		},
+		
+		// 语音触摸结束
+		onVoiceTouchEnd() {
+			if (!this.isRecording) return;
+			
+			if (this.isInCancelArea) {
+				// 取消录音
+				this.cancelRecording();
 			} else {
-				this.startRecording();
+				// 完成录音
+				this.stopRecording();
 			}
+			
+			this.isInCancelArea = false;
 		},
 		
 		// 开始录音
@@ -555,6 +642,19 @@ export default {
 			
 			// 发送语音消息
 			this.sendVoiceMessage();
+		},
+		
+		// 取消录音
+		cancelRecording() {
+			this.isRecording = false;
+			
+			if (this.recordingTimer) {
+				clearInterval(this.recordingTimer);
+				this.recordingTimer = null;
+			}
+			
+			uni.stopRecord();
+			this.$utils.toast('已取消录音');
 		},
 		
 		// 发送语音消息
@@ -699,6 +799,100 @@ export default {
 			uni.stopVoice();
 			// 可以选择是否关闭WebSocket连接
 			// websocketManager.close();
+		},
+		
+		// 显示消息菜单
+		showMessageMenu(message, index) {
+			this.selectedMessage = message;
+			this.selectedMessageIndex = index;
+			this.showMessageMenu = true;
+		},
+		
+		// 隐藏消息菜单
+		hideMessageMenu() {
+			this.showMessageMenu = false;
+			this.selectedMessage = null;
+			this.selectedMessageIndex = -1;
+		},
+		
+		// 检查是否可以撤回
+		canRecall(message) {
+			if (!message || !message.isSelf || message.type === 'recall') {
+				return false;
+			}
+			const now = Date.now();
+			const messageTime = message.time;
+			return (now - messageTime) <= this.recallTimeLimit;
+		},
+		
+		// 撤回消息
+		recallMessage() {
+			if (!this.selectedMessage || !this.canRecall(this.selectedMessage)) {
+				return;
+			}
+			
+			uni.showModal({
+				title: '提示',
+				content: '确定要撤回这条消息吗？',
+				success: (res) => {
+					if (res.confirm) {
+						const index = this.selectedMessageIndex;
+						if (index >= 0 && index < this.messages.length) {
+							const recalledMessage = {
+								id: Date.now(),
+								type: 'recall',
+								content: this.selectedMessage.isSelf ? '你撤回了一条消息' : '对方撤回了一条消息',
+								time: Date.now(),
+								isSelf: true,
+								nickname: '系统',
+								avatarBg: '#999',
+								status: 'sent'
+							};
+							
+							this.messages.splice(index, 1, recalledMessage);
+							this.$utils.toast('消息已撤回');
+						}
+						this.hideMessageMenu();
+					}
+				}
+			});
+		},
+		
+		// 复制消息
+		copyMessage() {
+			if (!this.selectedMessage || this.selectedMessage.type !== 'text') {
+				return;
+			}
+			
+			uni.setClipboardData({
+				data: this.selectedMessage.content,
+				success: () => {
+					this.$utils.toast('已复制到剪贴板');
+					this.hideMessageMenu();
+				}
+			});
+		},
+		
+		// 删除消息
+		deleteMessage() {
+			if (!this.selectedMessage) {
+				return;
+			}
+			
+			uni.showModal({
+				title: '提示',
+				content: '确定要删除这条消息吗？',
+				success: (res) => {
+					if (res.confirm) {
+						const index = this.selectedMessageIndex;
+						if (index >= 0 && index < this.messages.length) {
+							this.messages.splice(index, 1);
+							this.$utils.toast('消息已删除');
+						}
+						this.hideMessageMenu();
+					}
+				}
+			});
 		}
 	}
 };
@@ -1093,5 +1287,191 @@ export default {
 .recording-hint {
 	font-size: 24rpx;
 	color: rgba(255, 255, 255, 0.7);
+}
+
+// 取消模式样式
+.recording-tip.cancel-mode {
+	background-color: rgba(255, 77, 79, 0.9);
+}
+
+.recording-icon.cancel {
+	background-color: #ff4d4f;
+	animation: none;
+}
+
+// 消息菜单样式
+.message-menu-mask {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 998;
+}
+
+.message-menu {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background-color: #fff;
+	border-radius: 24rpx 24rpx 0 0;
+	padding: 20rpx;
+	z-index: 999;
+	animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+	from {
+		transform: translateY(100%);
+	}
+	to {
+		transform: translateY(0);
+	}
+}
+
+.menu-item {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+	padding: 28rpx 24rpx;
+	border-bottom: 1rpx solid #f0f0f0;
+	
+	&:last-child {
+		border-bottom: none;
+	}
+}
+
+.menu-text {
+	font-size: 30rpx;
+	color: #333;
+}
+
+// 撤回消息样式
+.message-recall {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 12rpx 24rpx;
+}
+
+.recall-text {
+	font-size: 24rpx;
+	color: #999;
+	background-color: rgba(0, 0, 0, 0.05);
+	padding: 8rpx 20rpx;
+	border-radius: 8rpx;
+}
+
+// 美化整体UI
+.chat-page {
+	background-color: #f8f9fa;
+}
+
+.message-item {
+	margin-bottom: 24rpx;
+}
+
+.avatar {
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.message-bubble {
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+	
+	&.text {
+		background-color: #fff;
+		border-radius: 20rpx;
+	}
+}
+
+.message-right .message-bubble {
+	&.text {
+		background-color: #FF6B35;
+		border-radius: 20rpx;
+	}
+}
+
+.input-area {
+	background-color: #fff;
+	border-top: 1rpx solid #e8e8e8;
+	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.03);
+}
+
+.input-wrapper {
+	background-color: #f5f7fa;
+	border-radius: 30rpx;
+}
+
+.tool-icon {
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+	transition: all 0.3s ease;
+	
+	&:active {
+		transform: scale(0.95);
+	}
+}
+
+// 语音按钮样式
+.voice-btn {
+	&.recording {
+		background-color: #fff1f0;
+		animation: pulse 1s infinite;
+	}
+	
+	&.cancel-area {
+		background-color: #ff4d4f;
+		
+		.u-icon {
+			color: #fff !important;
+		}
+	}
+}
+
+.emoji-item {
+	transition: all 0.2s ease;
+	
+	&:active {
+		transform: scale(0.9);
+	}
+}
+
+.message-image, .message-video {
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+	border-radius: 20rpx;
+	overflow: hidden;
+}
+
+.play-icon {
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+
+.message-voice {
+	padding: 16rpx 24rpx;
+	border-radius: 20rpx;
+}
+
+.typing-indicator {
+	text {
+		color: #999;
+		font-style: italic;
+	}
+}
+
+// 添加撤回状态指示
+.can-recall {
+	position: relative;
+	
+	&::after {
+		content: '';
+		position: absolute;
+		top: -8rpx;
+		right: -8rpx;
+		width: 16rpx;
+		height: 16rpx;
+		background-color: #FF6B35;
+		border-radius: 50%;
+	}
 }
 </style>
