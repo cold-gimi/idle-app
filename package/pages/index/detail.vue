@@ -436,7 +436,10 @@ export default {
 			this.$utils.toast(this.isCollected ? '收藏成功' : '取消收藏')
 		},
 		contactSeller() {
-			this.$utils.toast('联系卖家')
+			// 跳转到聊天页面
+			uni.navigateTo({
+				url: `/package/pages/chat/chat?shopId=shop_${this.auctionDetail.userId || 'demo_shop'}&shopName=${encodeURIComponent('商家客服')}&goodsId=${this.auctionId || 'mock_1'}`
+			})
 		},
 		openBidKeyboard() {
 			if (!this.canBid) {

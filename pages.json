@@ -74,6 +74,13 @@
           "style": {
             "navigationBarTitleText": "发布闲置"
           }
+        },
+        {
+          "path": "pages/chat/chat",
+          "style": {
+            "navigationBarTitleText": "聊天",
+            "backgroundColor": "#FFFFFF"
+          }
         }
       ]
     }
