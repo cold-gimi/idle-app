@@ -11,16 +11,12 @@
 			<!-- 搜索框 -->
 		</view>
 		<view style="background-color: #ff7a45;padding: 30rpx;">
-			<u-search
-			placeholder="搜索你想要的闲置好物..."
-			v-model="keyword"
-			shape="round"
-			:bg-color="'#fff'"
-			:input-align="'center'"
-			:show-action="false"
-			@search="onSearch"
-			@click="goSearchPage"
-		></u-search>
+			<view class="search-box" @click="goSearchPage">
+				<view class="search-content">
+					<u-icon name="search" size="32" color="#999"></u-icon>
+					<text class="search-placeholder">搜索你想要的闲置好物...</text>
+				</view>
+			</view>
 		</view>
 
 		<!-- 分类图标 -->
@@ -407,6 +403,31 @@ export default {
 .header {
 	padding: 0;
 	background: linear-gradient(135deg, #ff7a45 0%, #ff9f7a 100%);
+}
+
+.search-box {
+	background-color: #fff;
+	border-radius: 50rpx;
+	padding: 16rpx 30rpx;
+	display: flex;
+	align-items: center;
+	
+	&:active {
+		background-color: #f5f5f5;
+	}
+}
+
+.search-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	gap: 12rpx;
+}
+
+.search-placeholder {
+	font-size: 28rpx;
+	color: #999;
 }
 
 .category-wrap {
