@@ -1,6 +1,5 @@
 <template>
 	<view class="chat-page">
-		<!-- 自定义导航栏 -->
 		<u-navbar 
 			title="" 
 			:is-back="true" 
@@ -11,7 +10,7 @@
 		>
 			<view class="navbar-center" slot="default">
 				<view class="user-info">
-					<view class="avatar" style="background: #FF6B35;">
+					<view class="avatar" :style="{ background: shopAvatarBg || '#FF6B9D' }">
 						<text class="avatar-text">{{ shopName ? shopName.charAt(0) : '?' }}</text>
 					</view>
 					<view class="user-detail">
@@ -24,11 +23,26 @@
 				</view>
 			</view>
 			<view class="navbar-right" slot="right">
-				<u-icon name="more-dot" color="#333" size="40" @click="showMoreMenu"></u-icon>
+				<view class="nav-icons">
+					<u-icon name="volume" color="#333" size="40" class="nav-icon" @click="onVoiceClick"></u-icon>
+					<u-icon name="share" color="#333" size="40" class="nav-icon" @click="onShareClick"></u-icon>
+					<u-icon name="more-dot" color="#333" size="40" class="nav-icon" @click="showMoreMenu"></u-icon>
+				</view>
 			</view>
 		</u-navbar>
 		
-		<!-- 聊天消息列表 -->
+		<view class="goods-card" v-if="showGoodsCard" @click="viewGoodsDetail">
+			<image class="goods-image" :src="goodsInfo.image || '/static/image/phone.png'" mode="aspectFill"></image>
+			<view class="goods-info">
+				<text class="goods-title">{{ goodsInfo.title || '商品标题' }}</text>
+				<view class="goods-price">
+					<text class="current-price">¥{{ goodsInfo.price || '0' }}</text>
+					<text class="original-price" v-if="goodsInfo.originalPrice">¥{{ goodsInfo.originalPrice }}</text>
+				</view>
+			</view>
+			<u-icon name="arrow-right" color="#999" size="32"></u-icon>
+		</view>
+		
 		<scroll-view 
 			scroll-y 
 			class="message-list" 
@@ -44,24 +58,25 @@
 					:class="{ 'message-right': message.isSelf }"
 					@longpress="showMessageMenu(message, index)"
 				>
-					<!-- 头像 -->
-					<view class="avatar" :style="{ background: message.avatarBg || '#FF6B35' }">
-						<text class="avatar-text">{{ message.nickname ? message.nickname.charAt(0) : '?' }}</text>
+					<view class="avatar-wrapper">
+						<view class="avatar" :style="{ background: message.avatarBg || (message.isSelf ? '#FF6B35' : '#FF6B9D') }">
+							<text class="avatar-text">{{ message.nickname ? message.nickname.charAt(0) : '?' }}</text>
+						</view>
+						<view class="nickname-tag" v-if="message.isSelf">
+							<text>{{ message.nickname || '我' }}</text>
+						</view>
 					</view>
 					
-					<!-- 消息内容 -->
 					<view class="message-content">
 						<view class="message-time" v-if="showTime(index)">
 							<text>{{ formatTime(message.time) }}</text>
 						</view>
 						
 						<view class="message-bubble" :class="message.type">
-							<!-- 文本消息 -->
 							<template v-if="message.type === 'text'">
 								<text class="message-text">{{ message.content }}</text>
 							</template>
 							
-							<!-- 图片消息 -->
 							<template v-else-if="message.type === 'image'">
 								<image 
 									class="message-image" 
@@ -71,7 +86,6 @@
 								></image>
 							</template>
 							
-							<!-- 视频消息 -->
 							<template v-else-if="message.type === 'video'">
 								<view class="message-video" @click="playVideo(message.content)">
 									<image 
@@ -84,9 +98,9 @@
 									</view>
 									<view class="video-duration">{{ message.duration || '00:00' }}</view>
 								</view>
+								<text class="video-label" v-if="message.label">{{ message.label }}</text>
 							</template>
 							
-							<!-- 语音消息 -->
 							<template v-else-if="message.type === 'voice'">
 								<view class="message-voice" @click="toggleVoicePlay(message)">
 									<view class="voice-wave" :class="{ 'playing': message.isPlaying }">
@@ -96,7 +110,6 @@
 								</view>
 							</template>
 							
-							<!-- 撤回消息 -->
 							<template v-else-if="message.type === 'recall'">
 								<view class="message-recall">
 									<text class="recall-text">{{ message.content }}</text>
@@ -104,9 +117,8 @@
 							</template>
 						</view>
 						
-						<!-- 消息状态 -->
 						<view class="message-status" v-if="message.isSelf">
-							<u-icon v-if="message.status === 'sending'" name="loading" color="#999" size="24"></u-icon>
+							<text class="status-text" v-if="message.status === 'sending'">发送中...</text>
 							<u-icon v-else-if="message.status === 'failed'" name="info-circle" color="#ff4d4f" size="24"></u-icon>
 							<u-icon v-else-if="message.status === 'sent'" name="checkmark" color="#52c41a" size="24"></u-icon>
 						</view>
@@ -114,22 +126,17 @@
 				</view>
 			</view>
 			
-			<!-- 正在输入提示 -->
 			<view class="typing-indicator" v-if="isTyping">
 				<text>商家正在输入...</text>
 			</view>
 		</scroll-view>
 		
-		<!-- 底部输入区域 -->
 		<view class="input-area" :class="{ 'expanded': showMoreTools || showEmoji }">
-			<!-- 输入工具栏 -->
 			<view class="input-toolbar">
-				<!-- 左侧麦克风按钮 -->
 				<view class="tool-btn" @click="toggleVoiceInput">
-					<u-icon name="mic-fill" color="#666" size="48"></u-icon>
+					<u-icon name="mic" color="#666" size="48"></u-icon>
 				</view>
 				
-				<!-- 输入框 -->
 				<view class="input-wrapper">
 					<textarea 
 						v-model="inputText"
@@ -142,17 +149,14 @@
 					></textarea>
 				</view>
 				
-				<!-- 表情按钮 -->
 				<view class="tool-btn" @click="toggleEmoji">
 					<u-icon :name="showEmoji ? 'keyboard' : 'face'" color="#666" size="48"></u-icon>
 				</view>
 				
-				<!-- 更多按钮 -->
 				<view class="tool-btn" v-if="!inputText" @click="toggleMoreTools">
 					<u-icon :name="showMoreTools ? 'keyboard' : 'plus'" color="#666" size="48"></u-icon>
 				</view>
 				
-				<!-- 发送按钮 -->
 				<view class="send-btn" v-if="inputText" @click="sendTextMessage">
 					<view class="send-icon">
 						<u-icon name="arrow-right" color="#fff" size="32"></u-icon>
@@ -160,7 +164,6 @@
 				</view>
 			</view>
 			
-			<!-- 表情面板 -->
 			<view class="emoji-panel" v-if="showEmoji">
 				<scroll-view scroll-x class="emoji-scroll">
 					<view class="emoji-list">
@@ -176,10 +179,8 @@
 				</scroll-view>
 			</view>
 			
-			<!-- 更多工具面板 -->
 			<view class="more-tools-panel" v-if="showMoreTools">
 				<view class="tools-grid">
-					<!-- 图片 -->
 					<view class="tool-item" @click="chooseImage">
 						<view class="tool-icon">
 							<u-icon name="photo" color="#FF6B35" size="48"></u-icon>
@@ -187,7 +188,6 @@
 						<text class="tool-label">图片</text>
 					</view>
 					
-					<!-- 拍摄 -->
 					<view class="tool-item" @click="takePhoto">
 						<view class="tool-icon">
 							<u-icon name="camera" color="#1890FF" size="48"></u-icon>
@@ -195,15 +195,13 @@
 						<text class="tool-label">拍摄</text>
 					</view>
 					
-					<!-- 视频 -->
 					<view class="tool-item" @click="chooseVideo">
 						<view class="tool-icon">
-							<u-icon name="video" color="#52c41a" size="48"></u-icon>
+							<u-icon name="play-right" color="#52c41a" size="48"></u-icon>
 						</view>
 						<text class="tool-label">视频</text>
 					</view>
 					
-					<!-- 位置 -->
 					<view class="tool-item" @click="chooseLocation">
 						<view class="tool-icon">
 							<u-icon name="map" color="#722ED1" size="48"></u-icon>
@@ -214,7 +212,6 @@
 			</view>
 		</view>
 		
-		<!-- 录音提示 -->
 		<view class="recording-tip" v-if="isRecording" :class="{ 'cancel-mode': isInCancelArea }">
 			<view class="recording-icon" :class="{ 'cancel': isInCancelArea }">
 				<u-icon :name="isInCancelArea ? 'minus-circle' : 'mic'" color="#fff" size="60"></u-icon>
@@ -223,7 +220,6 @@
 			<text class="recording-hint">{{ isInCancelArea ? '向下滑动继续录音' : '上滑取消录音' }}</text>
 		</view>
 		
-		<!-- 消息操作菜单 -->
 		<view class="message-menu-mask" v-if="showMessageMenu" @click="hideMessageMenu"></view>
 		<view class="message-menu" v-if="showMessageMenu">
 			<view class="menu-item" v-if="canRecall(selectedMessage)" @click="recallMessage">
@@ -248,50 +244,49 @@ import websocketManager from '@/utils/websocket.js';
 export default {
 	data() {
 		return {
-			// 聊天信息
 			sessionId: '',
 			shopId: '',
 			shopName: '',
+			shopAvatarBg: '#FF6B9D',
 			userId: '',
 			userName: '',
 			avatarBg: '#FF6B35',
 			
-			// 消息列表
+			showGoodsCard: true,
+			goodsInfo: {
+				image: '/static/image/phone.png',
+				title: 'iPhone 14 Pro 256G 深空黑',
+				price: '3,800',
+				originalPrice: '5,999'
+			},
+			
 			messages: [],
 			
-			// 输入相关
 			inputText: '',
 			showEmoji: false,
 			showMoreTools: false,
 			
-			// 录音相关
 			isRecording: false,
 			recordingTime: 0,
 			recordingTimer: null,
 			voiceFilePath: '',
 			
-			// 状态
 			isTyping: false,
 			scrollToView: '',
 			
-			// 表情列表
-			emojiList: ['😀', '😂', '😊', '🥰', '😎', '🤔', '😘', '👍', '👎', '👏', '🙏', '💪', '❤️', '🔥', '🎉', '👍', '😍', '🤣', '😊', '🙂', '😉', '😇', '🥳', '😎', '🤩', '😋', '🤗', '🤔', '🤐', '🤫', '🤭', '🤫', '😏', '😒', '🙄', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '👻', '👽', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤'],
+			emojiList: ['😀', '😂', '😊', '🥰', '😎', '🤔', '😘', '👍', '👎', '👏', '🙏', '💪', '❤️', '🔥', '🎉', '👍', '😍', '🤣', '😊', '🙂', '😉', '😇', '🥳', '😎', '🤩', '😋', '🤗', '🤔', '🤐', '🤫', '🤭', '🤫', '😏', '😒', '🙄', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '👻', '👽', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🙏', '💅', '🤝', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '💓', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳', '💣', '💬', '🗨', '🗯', '💭', '💤'],
 			
-			// 消息菜单
 			showMessageMenu: false,
 			selectedMessage: null,
 			selectedMessageIndex: -1,
 			
-			// 撤回时间限制（2分钟）
 			recallTimeLimit: 120000,
 			
-			// 语音录制相关
 			isInCancelArea: false,
 			voiceStartY: 0
 		};
 	},
 	onLoad(options) {
-		// 从参数中获取会话信息
 		if (options.sessionId) {
 			this.sessionId = options.sessionId;
 		}
@@ -305,40 +300,28 @@ export default {
 			this.goodsId = options.goodsId;
 		}
 		
-		// 初始化WebSocket连接
 		this.initWebSocket();
-		
-		// 加载历史消息
 		this.loadHistoryMessages();
-		
-		// 监听消息
 		this.listenMessages();
 	},
 	onUnload() {
-		// 页面卸载时清理
 		this.cleanup();
 	},
 	methods: {
-		// 初始化WebSocket连接
 		initWebSocket() {
-			// 这里需要替换为实际的WebSocket服务器地址和用户token
-			const wsUrl = 'ws://localhost:8080/ws'; // 示例地址
+			const wsUrl = 'ws://localhost:8080/ws';
 			const token = uni.getStorageSync('token') || 'demo_token';
 			
-			// 连接WebSocket
 			websocketManager.init(wsUrl, token);
 			
-			// 监听连接状态
 			websocketManager.onConnection((event) => {
 				console.log('WebSocket连接状态:', event);
 				if (event.type === 'connected') {
-					// 连接成功后加入会话
 					this.joinSession();
 				}
 			});
 		},
 		
-		// 加入会话
 		joinSession() {
 			const joinMessage = {
 				type: 'join',
@@ -349,24 +332,22 @@ export default {
 			websocketManager.send(joinMessage);
 		},
 		
-		// 加载历史消息
 		loadHistoryMessages() {
-			// 模拟历史消息
 			this.messages = [
 				{
 					id: 1,
 					type: 'text',
-					content: '您好，欢迎咨询！请问有什么可以帮您的？',
+					content: '你好，这个iPhone还在吗？成色怎么样？',
 					time: Date.now() - 3600000,
 					isSelf: false,
-					nickname: '商家',
-					avatarBg: '#1890FF',
+					nickname: '小',
+					avatarBg: '#FF6B9D',
 					status: 'sent'
 				},
 				{
 					id: 2,
 					type: 'text',
-					content: '你好，我想了解一下这个商品的详情',
+					content: '在的！9成新，用了一年，换新机所以出掉。屏幕无划痕、背板完好 🙌',
 					time: Date.now() - 3500000,
 					isSelf: true,
 					nickname: '我',
@@ -379,27 +360,51 @@ export default {
 					content: '/static/image/phone.png',
 					time: Date.now() - 3400000,
 					isSelf: false,
-					nickname: '商家',
-					avatarBg: '#1890FF',
+					nickname: '小',
+					avatarBg: '#FF6B9D',
 					status: 'sent'
 				},
 				{
 					id: 4,
-					type: 'text',
-					content: '这是商品的实物图，您可以参考一下',
+					type: 'video',
+					content: '/static/video/demo.mp4',
+					thumbnail: '/static/image/phs.png',
+					duration: '0:23',
+					label: '实拍视频',
 					time: Date.now() - 3300000,
 					isSelf: false,
-					nickname: '商家',
-					avatarBg: '#1890FF',
+					nickname: '小',
+					avatarBg: '#FF6B9D',
 					status: 'sent'
+				},
+				{
+					id: 5,
+					type: 'video',
+					content: '/static/video/demo2.mp4',
+					thumbnail: '/static/image/phs.png',
+					duration: '1:05',
+					label: '开机验机视频',
+					time: Date.now() - 3200000,
+					isSelf: true,
+					nickname: '我',
+					avatarBg: '#FF6B35',
+					status: 'sent'
+				},
+				{
+					id: 6,
+					type: 'text',
+					content: '可以约个地方当面验机，我在朝阳区 😊',
+					time: Date.now() - 3100000,
+					isSelf: true,
+					nickname: '我',
+					avatarBg: '#FF6B35',
+					status: 'sending'
 				}
 			];
 			
-			// 滚动到底部
 			this.scrollToBottom();
 		},
 		
-		// 监听消息
 		listenMessages() {
 			websocketManager.onMessage((message) => {
 				console.log('收到消息:', message);
@@ -407,15 +412,12 @@ export default {
 			});
 		},
 		
-		// 处理收到的消息
 		handleReceivedMessage(message) {
-			// 根据消息类型处理
 			switch (message.type) {
 				case 'text':
 				case 'image':
 				case 'video':
 				case 'voice':
-					// 添加到消息列表
 					this.messages.push({
 						...message,
 						isSelf: false,
@@ -425,17 +427,14 @@ export default {
 					this.scrollToBottom();
 					break;
 				case 'typing':
-					// 正在输入提示
 					this.isTyping = true;
 					setTimeout(() => {
 						this.isTyping = false;
 					}, 3000);
 					break;
-				// 其他消息类型...
 			}
 		},
 		
-		// 发送文本消息
 		sendTextMessage() {
 			if (!this.inputText.trim()) return;
 			
@@ -450,12 +449,10 @@ export default {
 				status: 'sending'
 			};
 			
-			// 添加到消息列表
 			this.messages.push(message);
 			this.inputText = '';
 			this.scrollToBottom();
 			
-			// 通过WebSocket发送消息
 			const sendMessage = {
 				type: 'text',
 				sessionId: this.sessionId,
@@ -465,16 +462,13 @@ export default {
 			
 			if (websocketManager.isConnected) {
 				websocketManager.send(sendMessage);
-				// 更新消息状态
 				this.updateMessageStatus(message.id, 'sent');
 			} else {
-				// 连接失败，更新状态为失败
 				this.updateMessageStatus(message.id, 'failed');
 				this.$utils.toast('消息发送失败，请检查网络连接');
 			}
 		},
 		
-		// 更新消息状态
 		updateMessageStatus(messageId, status) {
 			const message = this.messages.find(m => m.id === messageId);
 			if (message) {
@@ -482,7 +476,6 @@ export default {
 			}
 		},
 		
-		// 选择图片
 		chooseImage() {
 			uni.chooseImage({
 				count: 9,
@@ -497,7 +490,6 @@ export default {
 			});
 		},
 		
-		// 拍照
 		takePhoto() {
 			uni.chooseImage({
 				count: 1,
@@ -512,7 +504,6 @@ export default {
 			});
 		},
 		
-		// 发送图片消息
 		sendImageMessage(filePath, index) {
 			const message = {
 				id: Date.now() + index,
@@ -528,13 +519,11 @@ export default {
 			this.messages.push(message);
 			this.scrollToBottom();
 			
-			// 模拟上传和发送成功
 			setTimeout(() => {
 				this.updateMessageStatus(message.id, 'sent');
 			}, 1000);
 		},
 		
-		// 预览图片
 		previewImage(currentUrl) {
 			const urls = this.messages
 				.filter(m => m.type === 'image')
@@ -546,7 +535,6 @@ export default {
 			});
 		},
 		
-		// 选择视频
 		chooseVideo() {
 			uni.chooseVideo({
 				sourceType: ['album', 'camera'],
@@ -558,7 +546,6 @@ export default {
 			});
 		},
 		
-		// 发送视频消息
 		sendVideoMessage(videoInfo) {
 			const message = {
 				id: Date.now(),
@@ -576,19 +563,16 @@ export default {
 			this.messages.push(message);
 			this.scrollToBottom();
 			
-			// 模拟上传和发送成功
 			setTimeout(() => {
 				this.updateMessageStatus(message.id, 'sent');
 			}, 2000);
 		},
 		
-		// 播放视频
 		playVideo(videoPath) {
 			uni.previewVideo({
 				url: videoPath,
 				fail: (error) => {
 					console.error('视频预览失败:', error);
-					// 如果previewVideo失败，尝试使用其他方式
 					uni.showModal({
 						title: '提示',
 						content: '视频预览失败，是否使用系统播放器打开？',
@@ -608,45 +592,37 @@ export default {
 			});
 		},
 		
-		// 语音触摸开始
 		onVoiceTouchStart(e) {
 			this.voiceStartY = e.touches[0].clientY;
 			this.isInCancelArea = false;
 			this.startRecording();
 		},
 		
-		// 语音触摸移动
 		onVoiceTouchMove(e) {
 			if (!this.isRecording) return;
 			
 			const currentY = e.touches[0].clientY;
 			const moveDistance = this.voiceStartY - currentY;
 			
-			// 上滑超过100px进入取消区域
 			this.isInCancelArea = moveDistance > 100;
 		},
 		
-		// 语音触摸结束
 		onVoiceTouchEnd() {
 			if (!this.isRecording) return;
 			
 			if (this.isInCancelArea) {
-				// 取消录音
 				this.cancelRecording();
 			} else {
-				// 完成录音
 				this.stopRecording();
 			}
 			
 			this.isInCancelArea = false;
 		},
 		
-		// 开始录音
 		startRecording() {
 			this.isRecording = true;
 			this.recordingTime = 0;
 			
-			// 开始计时
 			this.recordingTimer = setInterval(() => {
 				this.recordingTime++;
 				if (this.recordingTime >= 60) {
@@ -654,7 +630,6 @@ export default {
 				}
 			}, 1000);
 			
-			// 开始录音
 			uni.startRecord({
 				success: (res) => {
 					this.voiceFilePath = res.tempFilePath;
@@ -670,7 +645,6 @@ export default {
 			});
 		},
 		
-		// 停止录音
 		stopRecording() {
 			this.isRecording = false;
 			
@@ -686,11 +660,9 @@ export default {
 				return;
 			}
 			
-			// 发送语音消息
 			this.sendVoiceMessage();
 		},
 		
-		// 取消录音
 		cancelRecording() {
 			this.isRecording = false;
 			
@@ -703,7 +675,6 @@ export default {
 			this.$utils.toast('已取消录音');
 		},
 		
-		// 发送语音消息
 		sendVoiceMessage() {
 			const message = {
 				id: Date.now(),
@@ -722,15 +693,12 @@ export default {
 			this.messages.push(message);
 			this.scrollToBottom();
 			
-			// 模拟发送成功
 			setTimeout(() => {
 				this.updateMessageStatus(message.id, 'sent');
 			}, 500);
 		},
 		
-		// 切换语音播放
 		toggleVoicePlay(message) {
-			// 停止所有其他播放
 			this.messages.forEach(m => {
 				if (m.id !== message.id) {
 					m.isPlaying = false;
@@ -738,11 +706,9 @@ export default {
 			});
 			
 			if (message.isPlaying) {
-				// 停止播放
 				uni.stopVoice();
 				message.isPlaying = false;
 			} else {
-				// 开始播放
 				message.isPlaying = true;
 				uni.playVoice({
 					filePath: message.content,
@@ -751,7 +717,6 @@ export default {
 					}
 				});
 				
-				// 自动停止
 				setTimeout(() => {
 					if (message.isPlaying) {
 						uni.stopVoice();
@@ -761,18 +726,15 @@ export default {
 			}
 		},
 		
-		// 选择位置
 		chooseLocation() {
 			uni.chooseLocation({
 				success: (res) => {
 					console.log('选择位置:', res);
-					// 这里可以实现发送位置消息的功能
 					this.$utils.toast('位置选择功能开发中');
 				}
 			});
 		},
 		
-		// 显示更多菜单（导航栏右侧）
 		showMoreMenu() {
 			uni.showActionSheet({
 				itemList: ['查看资料', '清空聊天记录'],
@@ -795,29 +757,36 @@ export default {
 			});
 		},
 		
-		// 切换语音输入
+		onVoiceClick() {
+			this.$utils.toast('语音功能开发中');
+		},
+		
+		onShareClick() {
+			this.$utils.toast('分享功能开发中');
+		},
+		
+		viewGoodsDetail() {
+			this.$utils.toast('查看商品详情');
+		},
+		
 		toggleVoiceInput() {
 			this.$utils.toast('语音输入功能开发中');
 		},
 		
-		// 切换表情面板
 		toggleEmoji() {
 			this.showEmoji = !this.showEmoji;
 			this.showMoreTools = false;
 		},
 		
-		// 切换更多工具面板
 		toggleMoreTools() {
 			this.showMoreTools = !this.showMoreTools;
 			this.showEmoji = false;
 		},
 		
-		// 插入表情
 		insertEmoji(emoji) {
 			this.inputText += emoji;
 		},
 		
-		// 输入框获得焦点
 		onInputFocus() {
 			this.showEmoji = false;
 			this.showMoreTools = false;
@@ -826,12 +795,9 @@ export default {
 			}, 300);
 		},
 		
-		// 输入框失去焦点
 		onInputBlur() {
-			// 可以在这里处理失去焦点的逻辑
 		},
 		
-		// 滚动到底部
 		scrollToBottom() {
 			this.$nextTick(() => {
 				if (this.messages.length > 0) {
@@ -840,7 +806,6 @@ export default {
 			});
 		},
 		
-		// 格式化时间
 		formatTime(timestamp) {
 			const date = new Date(timestamp);
 			const hours = date.getHours().toString().padStart(2, '0');
@@ -848,48 +813,39 @@ export default {
 			return `${hours}:${minutes}`;
 		},
 		
-		// 格式化时长
 		formatDuration(seconds) {
 			const mins = Math.floor(seconds / 60);
 			const secs = Math.floor(seconds % 60);
-			return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+			return `${mins}:${secs.toString().padStart(2, '0')}`;
 		},
 		
-		// 是否显示时间
 		showTime(index) {
 			if (index === 0) return true;
 			const currentTime = this.messages[index].time;
 			const prevTime = this.messages[index - 1].time;
-			// 间隔超过5分钟显示时间
 			return currentTime - prevTime > 300000;
 		},
 		
-		// 清理资源
 		cleanup() {
 			if (this.recordingTimer) {
 				clearInterval(this.recordingTimer);
 			}
 			uni.stopRecord();
 			uni.stopVoice();
-			// 可以选择是否关闭WebSocket连接
-			// websocketManager.close();
 		},
 		
-		// 显示消息菜单
 		showMessageMenu(message, index) {
 			this.selectedMessage = message;
 			this.selectedMessageIndex = index;
 			this.showMessageMenu = true;
 		},
 		
-		// 隐藏消息菜单
 		hideMessageMenu() {
 			this.showMessageMenu = false;
 			this.selectedMessage = null;
 			this.selectedMessageIndex = -1;
 		},
 		
-		// 检查是否可以撤回
 		canRecall(message) {
 			if (!message || !message.isSelf || message.type === 'recall') {
 				return false;
@@ -899,7 +855,6 @@ export default {
 			return (now - messageTime) <= this.recallTimeLimit;
 		},
 		
-		// 撤回消息
 		recallMessage() {
 			if (!this.selectedMessage || !this.canRecall(this.selectedMessage)) {
 				return;
@@ -932,7 +887,6 @@ export default {
 			});
 		},
 		
-		// 复制消息
 		copyMessage() {
 			if (!this.selectedMessage || this.selectedMessage.type !== 'text') {
 				return;
@@ -947,7 +901,6 @@ export default {
 			});
 		},
 		
-		// 删除消息
 		deleteMessage() {
 			if (!this.selectedMessage) {
 				return;
@@ -977,10 +930,9 @@ export default {
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
-	background-color: #f5f5f5;
+	background-color: #f8f9fa;
 }
 
-// 导航栏中心区域样式
 .navbar-center {
 	display: flex;
 	align-items: center;
@@ -998,12 +950,14 @@ export default {
 	width: 56rpx;
 	height: 56rpx;
 	margin: 0;
-	border-radius: 50%;
+	border-radius: 12rpx;
 	box-shadow: none;
+	overflow: hidden;
 }
 
 .user-info .avatar .avatar-text {
 	font-size: 24rpx;
+	color: #fff;
 }
 
 .user-detail {
@@ -1041,26 +995,72 @@ export default {
 	line-height: 1.2;
 }
 
-// 导航栏右侧样式
 .navbar-right {
 	padding-right: 16rpx;
 	display: flex;
 	align-items: center;
 }
 
-// 发送按钮样式
-.send-btn {
-	flex-shrink: 0;
-}
-
-.send-icon {
-	width: 64rpx;
-	height: 64rpx;
-	background-color: #FF6B35;
-	border-radius: 50%;
+.nav-icons {
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	gap: 32rpx;
+}
+
+.nav-icon {
+	padding: 8rpx;
+}
+
+.goods-card {
+	display: flex;
+	align-items: center;
+	padding: 16rpx 20rpx;
+	background-color: #fff;
+	border-bottom: 1rpx solid #f0f0f0;
+	gap: 16rpx;
+}
+
+.goods-image {
+	width: 120rpx;
+	height: 120rpx;
+	border-radius: 12rpx;
+	background-color: #f5f5f5;
+}
+
+.goods-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+}
+
+.goods-title {
+	font-size: 28rpx;
+	color: #333;
+	line-height: 1.4;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.goods-price {
+	display: flex;
+	align-items: baseline;
+	gap: 12rpx;
+}
+
+.current-price {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #FF6B35;
+}
+
+.original-price {
+	font-size: 24rpx;
+	color: #999;
+	text-decoration: line-through;
 }
 
 .message-list {
@@ -1074,28 +1074,47 @@ export default {
 
 .message-item {
 	display: flex;
-	margin-bottom: 30rpx;
+	margin-bottom: 24rpx;
 	
 	&.message-right {
 		flex-direction: row-reverse;
 	}
 }
 
+.avatar-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8rpx;
+}
+
 .avatar {
 	width: 80rpx;
 	height: 80rpx;
-	border-radius: 50%;
+	border-radius: 12rpx;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
 	margin: 0 16rpx;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
 .avatar-text {
 	color: #fff;
 	font-size: 32rpx;
 	font-weight: 500;
+}
+
+.nickname-tag {
+	background-color: #FF6B35;
+	padding: 4rpx 12rpx;
+	border-radius: 8rpx;
+	
+	text {
+		font-size: 22rpx;
+		color: #fff;
+	}
 }
 
 .message-content {
@@ -1119,9 +1138,10 @@ export default {
 
 .message-bubble {
 	padding: 16rpx 24rpx;
-	border-radius: 16rpx;
+	border-radius: 20rpx;
 	position: relative;
 	word-break: break-all;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 	
 	&.text {
 		background-color: #fff;
@@ -1159,14 +1179,16 @@ export default {
 .message-image {
 	max-width: 400rpx;
 	max-height: 400rpx;
-	border-radius: 16rpx;
+	border-radius: 20rpx;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
 }
 
 .message-video {
 	position: relative;
 	max-width: 400rpx;
-	border-radius: 16rpx;
+	border-radius: 20rpx;
 	overflow: hidden;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
 }
 
 .video-thumbnail {
@@ -1187,6 +1209,7 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
 }
 
 .video-duration {
@@ -1200,11 +1223,20 @@ export default {
 	border-radius: 4rpx;
 }
 
+.video-label {
+	font-size: 24rpx;
+	color: #666;
+	margin-top: 8rpx;
+	display: block;
+}
+
 .message-voice {
 	display: flex;
 	align-items: center;
 	gap: 12rpx;
 	min-width: 120rpx;
+	padding: 16rpx 24rpx;
+	border-radius: 20rpx;
 }
 
 .voice-wave {
@@ -1275,6 +1307,13 @@ export default {
 	margin-top: 8rpx;
 	display: flex;
 	justify-content: flex-end;
+	align-items: center;
+	gap: 8rpx;
+}
+
+.status-text {
+	font-size: 22rpx;
+	color: #999;
 }
 
 .typing-indicator {
@@ -1282,13 +1321,15 @@ export default {
 	text {
 		font-size: 24rpx;
 		color: #999;
+		font-style: italic;
 	}
 }
 
 .input-area {
 	background-color: #fff;
-	border-top: 1rpx solid #f0f0f0;
+	border-top: 1rpx solid #e8e8e8;
 	padding: 16rpx;
+	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.03);
 	
 	&.expanded {
 		padding-bottom: env(safe-area-inset-bottom);
@@ -1312,8 +1353,8 @@ export default {
 
 .input-wrapper {
 	flex: 1;
-	background-color: #f5f5f5;
-	border-radius: 40rpx;
+	background-color: #f5f7fa;
+	border-radius: 30rpx;
 	padding: 16rpx 24rpx;
 	min-height: 80rpx;
 	max-height: 200rpx;
@@ -1330,6 +1371,16 @@ export default {
 
 .send-btn {
 	flex-shrink: 0;
+}
+
+.send-icon {
+	width: 64rpx;
+	height: 64rpx;
+	background-color: #FF6B35;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .emoji-panel {
@@ -1353,6 +1404,11 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	transition: all 0.2s ease;
+	
+	&:active {
+		transform: scale(0.9);
+	}
 }
 
 .emoji-text {
@@ -1386,22 +1442,11 @@ export default {
 	align-items: center;
 	justify-content: center;
 	margin-bottom: 12rpx;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+	transition: all 0.3s ease;
 	
-	&.recording {
-		background-color: #fff1f0;
-		animation: pulse 1s infinite;
-	}
-}
-
-@keyframes pulse {
-	0% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.05);
-	}
-	100% {
-		transform: scale(1);
+	&:active {
+		transform: scale(0.95);
 	}
 }
 
@@ -1446,7 +1491,18 @@ export default {
 	color: rgba(255, 255, 255, 0.7);
 }
 
-// 取消模式样式
+@keyframes pulse {
+	0% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.05);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
 .recording-tip.cancel-mode {
 	background-color: rgba(255, 77, 79, 0.9);
 }
@@ -1456,7 +1512,6 @@ export default {
 	animation: none;
 }
 
-// 消息菜单样式
 .message-menu-mask {
 	position: fixed;
 	top: 0;
@@ -1505,7 +1560,6 @@ export default {
 	color: #333;
 }
 
-// 撤回消息样式
 .message-recall {
 	display: flex;
 	justify-content: center;
@@ -1519,116 +1573,5 @@ export default {
 	background-color: rgba(0, 0, 0, 0.05);
 	padding: 8rpx 20rpx;
 	border-radius: 8rpx;
-}
-
-// 美化整体UI
-.chat-page {
-	background-color: #f8f9fa;
-}
-
-.message-item {
-	margin-bottom: 24rpx;
-}
-
-.avatar {
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-}
-
-.message-bubble {
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-	
-	&.text {
-		background-color: #fff;
-		border-radius: 20rpx;
-	}
-}
-
-.message-right .message-bubble {
-	&.text {
-		background-color: #FF6B35;
-		border-radius: 20rpx;
-	}
-}
-
-.input-area {
-	background-color: #fff;
-	border-top: 1rpx solid #e8e8e8;
-	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.03);
-}
-
-.input-wrapper {
-	background-color: #f5f7fa;
-	border-radius: 30rpx;
-}
-
-.tool-icon {
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-	transition: all 0.3s ease;
-	
-	&:active {
-		transform: scale(0.95);
-	}
-}
-
-// 语音按钮样式
-.voice-btn {
-	&.recording {
-		background-color: #fff1f0;
-		animation: pulse 1s infinite;
-	}
-	
-	&.cancel-area {
-		background-color: #ff4d4f;
-		
-		.u-icon {
-			color: #fff !important;
-		}
-	}
-}
-
-.emoji-item {
-	transition: all 0.2s ease;
-	
-	&:active {
-		transform: scale(0.9);
-	}
-}
-
-.message-image, .message-video {
-	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
-	border-radius: 20rpx;
-	overflow: hidden;
-}
-
-.play-icon {
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
-}
-
-.message-voice {
-	padding: 16rpx 24rpx;
-	border-radius: 20rpx;
-}
-
-.typing-indicator {
-	text {
-		color: #999;
-		font-style: italic;
-	}
-}
-
-// 添加撤回状态指示
-.can-recall {
-	position: relative;
-	
-	&::after {
-		content: '';
-		position: absolute;
-		top: -8rpx;
-		right: -8rpx;
-		width: 16rpx;
-		height: 16rpx;
-		background-color: #FF6B35;
-		border-radius: 50%;
-	}
 }
 </style>
