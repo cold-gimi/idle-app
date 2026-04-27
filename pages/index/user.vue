@@ -93,25 +93,11 @@
 			</view>
 			
 			<view class="menu-section">
-				<view class="menu-item" @click="goToProfile">
-					<view class="menu-icon-wrapper" style="background: #D0F0E0;">
-						<u-icon name="account-fill" color="#2ECC71" size="28"></u-icon>
-					</view>
-					<view class="menu-title">个人信息</view>
-					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
-				</view>
 				<view class="menu-item" @click="goToAccount">
 					<view class="menu-icon-wrapper" style="background: #FFE4D6;">
 						<u-icon name="lock-fill" color="#E67E22" size="28"></u-icon>
 					</view>
 					<view class="menu-title">账号与安全</view>
-					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
-				</view>
-				<view class="menu-item" @click="goToArticle">
-					<view class="menu-icon-wrapper" style="background: #E0E8FF;">
-						<u-icon name="file-text-fill" color="#3498DB" size="28"></u-icon>
-					</view>
-					<view class="menu-title">文章列表</view>
 					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
 				</view>
 				<view class="menu-item" @click="goToAbout">
