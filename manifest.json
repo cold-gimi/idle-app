@@ -50,28 +50,27 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "wxdba9c707b0316370",
+        "appid": "wxdba9c707b0316370",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "minified" : true,
+            "es6" : true,
+            "postcss" : true
         },
-        "optimization" : {
-            "subPackages" : true
-        },
-        "__usePrivacyCheck__" : true,
         "usingComponents" : true,
-        "lazyCodeLoading" : "requiredComponents",
         "permission" : {
             "scope.userLocation" : {
                 "desc" : "获取您的位置信息以展示附近的闲置好物"
-            },
-            "scope.camera" : {
-                "desc" : "使用相机拍摄商品照片"
-            },
-            "scope.album" : {
-                "desc" : "从相册选择商品图片"
             }
         },
-        "requiredPrivateInfos" : ["chooseLocation"]
+        "optimization": {
+            "subPackages" : true
+        },
+        "lazyCodeLoading": "requiredComponents",
+        "requiredPrivateInfos": [
+            "chooseLocation",
+            "getLocation"
+        ]
     },
     "mp-alipay" : {
         "usingComponents" : true
