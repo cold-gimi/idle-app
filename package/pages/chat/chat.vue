@@ -1,12 +1,12 @@
 <template>
 	<view class="chat-page">
 		<u-navbar 
-			title="" 
+			title=" " 
 			:is-back="true" 
 			back-icon-name="nav-back"
-			back-icon-color="#333"
-			:background="{ backgroundColor: '#fff' }"
-			:border-bottom="true"
+			back-icon-color="#fff"
+			:background="{ backgroundImage: 'linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%)' }"
+			:border-bottom="false"
 		>
 			<view class="navbar-center" slot="default">
 				<view class="user-info">
@@ -20,13 +20,6 @@
 							<text class="status-text">在线</text>
 						</view>
 					</view>
-				</view>
-			</view>
-			<view class="navbar-right" slot="right">
-				<view class="nav-icons">
-					<u-icon name="volume" color="#333" size="40" class="nav-icon" @click="onVoiceClick"></u-icon>
-					<u-icon name="share" color="#333" size="40" class="nav-icon" @click="onShareClick"></u-icon>
-					<u-icon name="more-dot" color="#333" size="40" class="nav-icon" @click="showMoreMenu"></u-icon>
 				</view>
 			</view>
 		</u-navbar>
@@ -129,32 +122,28 @@
 			<view class="typing-indicator" v-if="isTyping">
 				<text>商家正在输入...</text>
 			</view>
+			<view style="height: 20rpx;"></view>
 		</scroll-view>
 		
-		<view class="input-area" :class="{ 'expanded': showMoreTools || showEmoji }">
+		<!-- 底部占位 -->
+		<view :style="{ height: (keyboardHeight + (keyboardHeight > 0 ? inputAreaHeight - safeAreaHeight : inputAreaHeight)) + 'px' }"></view>
+		
+		<view class="input-area" id="input-area" :class="{ 'expanded': showMoreTools || showEmoji }" :style="{ bottom: keyboardHeight + 'px', paddingBottom: keyboardHeight > 0 ? '16rpx' : '' }">
 			<view class="input-toolbar">
 				<view class="tool-btn" @click="toggleVoiceInput">
 					<u-icon name="mic" color="#666" size="48"></u-icon>
 				</view>
 				
 				<view class="input-wrapper">
-					<textarea 
-						v-model="inputText"
-						class="chat-input"
-						placeholder="发消息..."
-						:maxlength="500"
-						:adjust-position="false"
-						@focus="onInputFocus"
-						@blur="onInputBlur"
-					></textarea>
+					<textarea v-model="inputText" placeholder="发消息..." class="textarea" :auto-height="true" :show-confirm-bar="false" confirm-type="send" :disable-default-padding="true" :fixed="true" :adjust-position="false" @focus="onInputFocus" @blur="onInputBlur" @keyboardheightchange="onKeyboardHeightChange" @confirm="sendTextMessage"></textarea>
 				</view>
 				
 				<view class="tool-btn" @click="toggleEmoji">
-					<u-icon :name="showEmoji ? 'keyboard' : 'face'" color="#666" size="48"></u-icon>
+					😀
 				</view>
 				
 				<view class="tool-btn" v-if="!inputText" @click="toggleMoreTools">
-					<u-icon :name="showMoreTools ? 'keyboard' : 'plus'" color="#666" size="48"></u-icon>
+					<u-icon :name="showMoreTools ? 'close' : 'plus'" color="#666" size="48"></u-icon>
 				</view>
 				
 				<view class="send-btn" v-if="inputText" @click="sendTextMessage">
@@ -235,13 +224,20 @@
 				<text class="menu-text" style="color: #ff4d4f;">删除</text>
 			</view>
 		</view>
+		
+		<!-- 隐私协议弹窗 -->
+		<privacy-popup></privacy-popup>
 	</view>
 </template>
 
 <script>
 import websocketManager from '@/utils/websocket.js';
+import privacyPopup from '@/components/privacy-popup/privacy-popup.vue';
 
 export default {
+	components: {
+		privacyPopup
+	},
 	data() {
 		return {
 			sessionId: '',
@@ -283,10 +279,17 @@ export default {
 			recallTimeLimit: 120000,
 			
 			isInCancelArea: false,
-			voiceStartY: 0
+			voiceStartY: 0,
+			
+			keyboardHeight: 0,
+			inputAreaHeight: 0,
+			safeAreaHeight: 0
 		};
 	},
 	onLoad(options) {
+		const systemInfo = uni.getSystemInfoSync();
+		this.safeAreaHeight = systemInfo.screenHeight - systemInfo.safeArea.bottom;
+		
 		if (options.sessionId) {
 			this.sessionId = options.sessionId;
 		}
@@ -303,6 +306,9 @@ export default {
 		this.initWebSocket();
 		this.loadHistoryMessages();
 		this.listenMessages();
+	},
+	onReady() {
+		this.updateInputAreaHeight();
 	},
 	onUnload() {
 		this.cleanup();
@@ -477,6 +483,10 @@ export default {
 		},
 		
 		chooseImage() {
+			this._doChooseImage();
+		},
+		
+		_doChooseImage() {
 			uni.chooseImage({
 				count: 9,
 				sizeType: ['original', 'compressed'],
@@ -486,11 +496,32 @@ export default {
 					tempFilePaths.forEach((filePath, index) => {
 						this.sendImageMessage(filePath, index);
 					});
+				},
+				fail: (err) => {
+					console.error('选择图片失败:', err);
+					if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+						uni.showModal({
+							title: '提示',
+							content: '需要您的相册许可才能选择图片，请前往设置开启',
+							confirmText: '去设置',
+							success: (res) => {
+								if (res.confirm) {
+									uni.openSetting();
+								}
+							}
+						});
+					} else if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+						this.$utils.toast('选择图片失败');
+					}
 				}
 			});
 		},
 		
 		takePhoto() {
+			this._doTakePhoto();
+		},
+		
+		_doTakePhoto() {
 			uni.chooseImage({
 				count: 1,
 				sizeType: ['original', 'compressed'],
@@ -500,11 +531,28 @@ export default {
 					tempFilePaths.forEach((filePath, index) => {
 						this.sendImageMessage(filePath, index);
 					});
+				},
+				fail: (err) => {
+					console.error('拍照失败:', err);
+					if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+						uni.showModal({
+							title: '提示',
+							content: '需要您的相机许可才能拍摄，请前往设置开启',
+							confirmText: '去设置',
+							success: (res) => {
+								if (res.confirm) {
+									uni.openSetting();
+								}
+							}
+						});
+					} else if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+						this.$utils.toast('拍照失败');
+					}
 				}
 			});
 		},
 		
-		sendImageMessage(filePath, index) {
+		async sendImageMessage(filePath, index) {
 			const message = {
 				id: Date.now() + index,
 				type: 'image',
@@ -519,9 +567,41 @@ export default {
 			this.messages.push(message);
 			this.scrollToBottom();
 			
-			setTimeout(() => {
-				this.updateMessageStatus(message.id, 'sent');
-			}, 1000);
+			try {
+				const res = await this.$utils.upload({
+					url: 'UPLOAD',
+					filePath: filePath,
+					name: 'file'
+				});
+				
+				if (res && res.success) {
+					const imageUrl = res.data.url;
+					// 更新本地消息内容为服务器返回的URL
+					message.content = imageUrl;
+					
+					// 发送WebSocket消息
+					const sendMessage = {
+						type: 'image',
+						sessionId: this.sessionId,
+						content: imageUrl,
+						timestamp: message.time
+					};
+					
+					if (websocketManager.isConnected) {
+						websocketManager.send(sendMessage);
+						this.updateMessageStatus(message.id, 'sent');
+					} else {
+						this.updateMessageStatus(message.id, 'failed');
+						this.$utils.toast('网络连接已断开，发送失败');
+					}
+				} else {
+					throw new Error(res.message || '上传失败');
+				}
+			} catch (error) {
+				console.error('图片上传失败:', error);
+				this.updateMessageStatus(message.id, 'failed');
+				this.$utils.toast('图片上传失败');
+			}
 		},
 		
 		previewImage(currentUrl) {
@@ -542,6 +622,23 @@ export default {
 				camera: 'back',
 				success: (res) => {
 					this.sendVideoMessage(res);
+				},
+				fail: (err) => {
+					console.error('选择视频失败:', err);
+					if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+						uni.showModal({
+							title: '提示',
+							content: '需要您的相机或相册许可才能选择视频，请前往设置开启',
+							confirmText: '去设置',
+							success: (res) => {
+								if (res.confirm) {
+									uni.openSetting();
+								}
+							}
+						});
+					} else if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+						this.$utils.toast('选择视频失败');
+					}
 				}
 			});
 		},
@@ -634,13 +731,27 @@ export default {
 				success: (res) => {
 					this.voiceFilePath = res.tempFilePath;
 				},
-				fail: (error) => {
-					console.error('录音失败:', error);
+				fail: (err) => {
+					console.error('录音失败:', err);
 					this.isRecording = false;
 					if (this.recordingTimer) {
 						clearInterval(this.recordingTimer);
 					}
-					this.$utils.toast('录音失败，请检查权限');
+					
+					if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+						uni.showModal({
+							title: '提示',
+							content: '需要您的麦克风许可才能录音，请前往设置开启',
+							confirmText: '去设置',
+							success: (res) => {
+								if (res.confirm) {
+									uni.openSetting();
+								}
+							}
+						});
+					} else {
+						this.$utils.toast('录音失败，请检查权限');
+					}
 				}
 			});
 		},
@@ -731,6 +842,23 @@ export default {
 				success: (res) => {
 					console.log('选择位置:', res);
 					this.$utils.toast('位置选择功能开发中');
+				},
+				fail: (err) => {
+					console.error('选择位置失败:', err);
+					if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+						uni.showModal({
+							title: '提示',
+							content: '需要您的位置信息许可才能选择位置，请前往设置开启',
+							confirmText: '去设置',
+							success: (res) => {
+								if (res.confirm) {
+									uni.openSetting();
+								}
+							}
+						});
+					} else if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+						this.$utils.toast('选择位置失败');
+					}
 				}
 			});
 		},
@@ -775,27 +903,54 @@ export default {
 		
 		toggleEmoji() {
 			this.showEmoji = !this.showEmoji;
-			this.showMoreTools = false;
-		},
-		
-		toggleMoreTools() {
-			this.showMoreTools = !this.showMoreTools;
-			this.showEmoji = false;
-		},
+		this.showMoreTools = false;
+		this.updateInputAreaHeight();
+	},
+	
+	toggleMoreTools() {
+		this.showMoreTools = !this.showMoreTools;
+		this.showEmoji = false;
+		this.updateInputAreaHeight();
+	},
 		
 		insertEmoji(emoji) {
 			this.inputText += emoji;
 		},
 		
-		onInputFocus() {
+		onInputFocus(e) {
 			this.showEmoji = false;
 			this.showMoreTools = false;
+			// 这里的 e.detail.height 可能不准，依赖 keyboardheightchange
 			setTimeout(() => {
 				this.scrollToBottom();
 			}, 300);
 		},
 		
 		onInputBlur() {
+			this.keyboardHeight = 0;
+		},
+		
+		onKeyboardHeightChange(e) {
+			const { height } = e.detail;
+			this.keyboardHeight = height;
+			if (height > 0) {
+				this.scrollToBottom();
+			}
+			this.updateInputAreaHeight();
+		},
+		
+		updateInputAreaHeight() {
+			this.$nextTick(() => {
+				setTimeout(() => {
+					const query = uni.createSelectorQuery().in(this);
+					query.select('#input-area').boundingClientRect(data => {
+						if (data) {
+							this.inputAreaHeight = data.height;
+							this.scrollToBottom();
+						}
+					}).exec();
+				}, 50);
+			});
 		},
 		
 		scrollToBottom() {
@@ -930,13 +1085,13 @@ export default {
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
-	background-color: #f8f9fa;
+	background-color: #f8f8f8;
+	position: relative;
 }
 
 .navbar-center {
 	display: flex;
 	align-items: center;
-	justify-content: center;
 	width: 100%;
 }
 
@@ -967,16 +1122,17 @@ export default {
 }
 
 .nickname {
-	font-size: 30rpx;
-	font-weight: 500;
-	color: #333;
+	font-size: 32rpx;
+	font-weight: 600;
+	color: #fff;
 	line-height: 1.2;
 }
 
 .status {
 	display: flex;
 	align-items: center;
-	gap: 6rpx;
+	gap: 8rpx;
+	margin-top: 4rpx;
 }
 
 .status-dot {
@@ -986,12 +1142,37 @@ export default {
 	
 	&.online {
 		background-color: #52c41a;
+		position: relative;
+		border: 2rpx solid rgba(255, 255, 255, 0.8);
+		
+		&::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			border-radius: 50%;
+			background-color: #52c41a;
+			animation: breathe 2s infinite;
+		}
+	}
+}
+
+@keyframes breathe {
+	0% {
+		transform: scale(1);
+		opacity: 0.8;
+	}
+	100% {
+		transform: scale(3);
+		opacity: 0;
 	}
 }
 
 .status-text {
-	font-size: 22rpx;
-	color: #999;
+	font-size: 20rpx;
+	color: rgba(255, 255, 255, 0.9);
 	line-height: 1.2;
 }
 
@@ -1064,13 +1245,16 @@ export default {
 }
 
 .message-list {
-	flex: 1;
-	overflow: hidden;
-}
-
-.messages {
-	padding: 20rpx;
-}
+		flex: 1;
+		width: 100%;
+		height: 0; /* 关键：确保 flex: 1 能正确压缩/拉伸 */
+		background-color: #f5f5f5;
+		overflow: hidden;
+		
+		.messages {
+			padding: 30rpx 20rpx;
+		}
+	}
 
 .message-item {
 	display: flex;
@@ -1326,61 +1510,78 @@ export default {
 }
 
 .input-area {
-	background-color: #fff;
-	border-top: 1rpx solid #e8e8e8;
-	padding: 16rpx;
-	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.03);
-	
-	&.expanded {
-		padding-bottom: env(safe-area-inset-bottom);
+		background-color: #f8f8f8;
+		border-top: 1rpx solid #eee;
+		padding: 16rpx 20rpx;
+		padding-bottom: calc(16rpx + constant(safe-area-inset-bottom));
+		padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+		transition: bottom 0.2s, padding-bottom 0.2s;
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 100;
+
+		&.expanded {
+			padding-bottom: 30rpx !important;
+		}
+
+	.input-toolbar {
+		display: flex;
+		align-items: flex-end;
+		min-height: 88rpx;
+
+		.tool-btn {
+			width: 80rpx;
+			height: 80rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+
+		.input-wrapper {
+			flex: 1;
+			background-color: #fff;
+			border-radius: 40rpx;
+			margin: 0 10rpx;
+			padding: 18rpx 30rpx;
+			min-height: 80rpx;
+			display: flex;
+			align-items: center;
+			box-sizing: border-box;
+
+			.textarea {
+				width: 100%;
+				font-size: 30rpx;
+				line-height: 1.4;
+				color: #333;
+				max-height: 200rpx;
+				/* 兼容性处理 */
+				padding: 0;
+				margin: 0;
+			}
+		}
+
+		.send-btn {
+			width: 80rpx;
+			height: 80rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+
+			.send-icon {
+				width: 64rpx;
+				height: 64rpx;
+				background-color: #FF6B35;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+		}
 	}
-}
-
-.input-toolbar {
-	display: flex;
-	align-items: flex-end;
-	gap: 12rpx;
-}
-
-.tool-btn {
-	width: 80rpx;
-	height: 80rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-}
-
-.input-wrapper {
-	flex: 1;
-	background-color: #f5f7fa;
-	border-radius: 30rpx;
-	padding: 16rpx 24rpx;
-	min-height: 80rpx;
-	max-height: 200rpx;
-}
-
-.chat-input {
-	width: 100%;
-	min-height: 48rpx;
-	max-height: 160rpx;
-	font-size: 30rpx;
-	line-height: 1.6;
-	color: #333;
-}
-
-.send-btn {
-	flex-shrink: 0;
-}
-
-.send-icon {
-	width: 64rpx;
-	height: 64rpx;
-	background-color: #FF6B35;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 }
 
 .emoji-panel {

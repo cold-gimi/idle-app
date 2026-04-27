@@ -9,47 +9,12 @@
 			</swiper>
 		</view>
 
-		<!-- 倒计时和拍卖状态 -->
-		<view class="countdown-card">
-			<view class="countdown-header">
-				<u-tag :text="auctionStatusText" size="mini" :type="auctionStatusType"></u-tag>
-				<text class="countdown-title" v-if="auctionStatus.isActive">距离结束还有</text>
-				<text class="countdown-title" v-else-if="auctionStatus.remainingTime > 0">即将开始</text>
-				<text class="countdown-title" v-else>拍卖已结束</text>
-			</view>
-			<view class="countdown-timer" v-if="auctionStatus.remainingTime > 0">
-				<view class="time-box">
-					<text class="time-num">{{ countdownDetail.days.toString().padStart(2, '0') }}</text>
-					<text class="time-label">天</text>
-				</view>
-				<text class="time-colon">:</text>
-				<view class="time-box">
-					<text class="time-num">{{ countdownDetail.hours.toString().padStart(2, '0') }}</text>
-					<text class="time-label">时</text>
-				</view>
-				<text class="time-colon">:</text>
-				<view class="time-box">
-					<text class="time-num">{{ countdownDetail.minutes.toString().padStart(2, '0') }}</text>
-					<text class="time-label">分</text>
-				</view>
-				<text class="time-colon">:</text>
-				<view class="time-box">
-					<text class="time-num">{{ countdownDetail.seconds.toString().padStart(2, '0') }}</text>
-					<text class="time-label">秒</text>
-				</view>
-			</view>
-		</view>
-
 		<!-- 价格信息 -->
 		<view class="price-card">
 			<view class="price-row">
 				<view class="current-price-wrap">
 					<text class="price-symbol">¥</text>
 					<text class="current-price">{{ formattedCurrentPrice }}</text>
-				</view>
-				<view class="price-info">
-					<text class="original-price">起拍价 ¥{{ formattedStartPrice }}</text>
-					<text class="increment-price">加价幅度 ¥{{ auctionStatus.increment }}</text>
 				</view>
 			</view>
 			<text class="goods-title">{{ auctionDetail.title }}</text>
@@ -71,10 +36,6 @@
 			<!-- 统计信息 -->
 			<view class="stats-row">
 				<view class="stat-item">
-					<text class="stat-num">{{ auctionStatus.bidCount }}</text>
-					<text class="stat-label">出价次数</text>
-				</view>
-				<view class="stat-item">
 					<text class="stat-num">{{ auctionDetail.wantCount || 0 }}</text>
 					<text class="stat-label">想买</text>
 				</view>
@@ -83,158 +44,80 @@
 					<text class="stat-label">收藏</text>
 				</view>
 			</view>
-
-			<!-- 最高出价者 -->
-			<view class="highest-bidder" v-if="auctionStatus.highestBidder">
-				<view class="bidder-avatar" :style="{ background: auctionStatus.highestBidder.avatarBg || '#667eea' }">
-					<text class="bidder-avatar-text">{{ auctionStatus.highestBidder.name ? auctionStatus.highestBidder.name.charAt(0) : '?' }}</text>
-				</view>
-				<view class="bidder-info">
-					<text class="bidder-name">{{ auctionStatus.highestBidder.name }}</text>
-					<text class="bidder-status">当前最高出价者</text>
-				</view>
-				<u-tag text="领先" type="success" size="mini"></u-tag>
-			</view>
-		</view>
-
-		<!-- 出价历史 -->
-		<view class="history-card" v-if="bidHistory.length > 0">
-			<view class="history-header">
-				<text class="history-title">出价历史</text>
-				<text class="history-count">共 {{ bidHistory.length }} 次</text>
-			</view>
-			<scroll-view scroll-y="true" class="history-list">
-				<view v-for="(bid, index) in sortedBidHistory" :key="bid.id" class="history-item">
-					<view class="history-avatar" :style="{ background: bid.avatarBg || '#667eea' }">
-						<text class="history-avatar-text">{{ bid.username ? bid.username.charAt(0) : '?' }}</text>
-					</view>
-					<view class="history-content">
-						<view class="history-row">
-							<text class="history-name">{{ bid.username || '用户' }}</text>
-							<text class="history-time">{{ getTimeAgo(bid.createTime) }}</text>
-						</view>
-						<view class="history-bid">
-							<text class="history-price">¥{{ formattedPrice(bid.price) }}</text>
-							<u-tag v-if="bid.status === 'success'" text="成功" type="success" size="mini"></u-tag>
-							<u-tag v-else text="失败" type="error" size="mini"></u-tag>
-						</view>
-						<text v-if="bid.message" class="history-message">{{ bid.message }}</text>
-					</view>
-				</view>
-			</scroll-view>
 		</view>
 
 		<!-- 商品描述 -->
 		<view class="desc-card">
-			<view class="desc-title">
-				<u-icon name="file-text-fill" color="#333" size="28"></u-icon>
-				<text>商品描述</text>
+			<view class="section-title">
+				<text>商品详情</text>
 			</view>
 			<text class="desc-content">{{ auctionDetail.description }}</text>
 		</view>
 
-		<!-- 底部占位 -->
-		<view class="bottom-placeholder"></view>
-
-		<!-- 出价键盘弹窗 -->
-		<u-popup :show="showBidKeyboard" mode="bottom" @close="closeBidKeyboard" :safe-area-inset-bottom="true">
-			<view class="bid-keyboard-popup">
-				<view class="keyboard-header">
-					<text class="keyboard-title">出价</text>
-					<u-icon name="close" size="40" color="#999" @click="closeBidKeyboard"></u-icon>
+		<!-- 留言区域 -->
+		<view class="comment-section">
+			<view class="section-title">
+				<text>留言</text>
+				<text class="comment-count">({{ bidHistory.length }})</text>
+			</view>
+			
+			<!-- 快速留言输入框 -->
+			<view class="comment-input-bar">
+				<view class="input-wrapper">
+					<input 
+						type="text" 
+						v-model="bidMessage" 
+						placeholder="看对眼了,留言问问~" 
+						confirm-type="send"
+						@confirm="submitBid"
+					/>
 				</view>
-				<view class="keyboard-content">
-					<view class="current-price-info">
-						<text class="label">当前价格</text>
-						<text class="price">¥{{ formattedCurrentPrice }}</text>
-					</view>
-					<view class="min-bid-info">
-						<text class="label">最低出价</text>
-						<text class="min-price">¥{{ formattedMinBid }}</text>
-					</view>
-					<view class="bid-input-section">
-						<view class="input-label">我的出价</view>
-						<view class="input-wrap">
-							<text class="input-symbol">¥</text>
-							<input 
-								class="bid-input" 
-								type="digit" 
-								v-model="bidPrice" 
-								placeholder="请输入出价金额"
-								:focus="true"
-								:maxlength="10"
-							/>
-						</view>
-						<text v-if="bidError" class="error-text">{{ bidError }}</text>
-					</view>
-					<view class="quick-bid-section">
-						<view class="quick-bid-title">快捷加价</view>
-						<view class="quick-bid-btns">
-							<view 
-								v-for="(add, index) in quickAddAmounts" 
-								:key="index"
-								class="quick-btn"
-								@click="quickAddBid(add)"
-							>
-								<text>+{{ add }}</text>
-							</view>
-						</view>
-					</view>
-					<view class="message-section">
-						<view class="input-label">留言（可选）</view>
-						<view class="message-input-wrap">
-							<input 
-								class="message-input" 
-								type="text" 
-								v-model="bidMessage" 
-								placeholder="可以给卖家留言..."
-								:maxlength="50"
-							/>
-						</view>
-					</view>
-					<u-button 
-						type="error" 
-						shape="circle" 
-						class="submit-bid-btn"
-						:disabled="!canSubmitBid"
-						:loading="isSubmitting"
-						@click="submitBid"
-					>
-						{{ isSubmitting ? '出价中...' : '确认出价' }}
-					</u-button>
+				<view class="add-btn" @click="submitBid">
+					<u-icon name="plus" color="#fff" size="32"></u-icon>
 				</view>
 			</view>
-		</u-popup>
+
+			<!-- 留言列表 -->
+			<view class="comment-list">
+				<view v-for="bid in sortedBidHistory" :key="bid.id" class="comment-item">
+					<view class="user-avatar" :style="{ background: bid.avatarBg || '#eee' }">
+						<text>{{ bid.username ? bid.username.charAt(0) : '?' }}</text>
+					</view>
+					<view class="comment-body">
+						<view class="comment-header">
+							<text class="username">{{ bid.username || '用户' }}</text>
+							<text class="time">{{ getTimeAgo(bid.createTime) }}</text>
+						</view>
+						<text class="content">{{ bid.message }}</text>
+					</view>
+				</view>
+				<view v-if="bidHistory.length === 0" class="empty-comment">
+					<text>暂无留言，快来抢沙发吧~</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 底部占位 -->
+		<view class="safe-bottom-placeholder"></view>
 
 		<!-- 底部操作栏 -->
-		<view class="bottom-bar">
-			<view class="action-item" @click="toggleCollect">
-				<u-icon :name="isCollected ? 'heart-fill' : 'heart'" :color="isCollected ? '#ff4d4f' : '#999'" size="40"></u-icon>
-				<text :class="{ collected: isCollected }">收藏</text>
+		<view class="footer-bar">
+			<view class="footer-left">
+				<view class="footer-action" @click="toggleCollect">
+					<u-icon :name="isCollected ? 'heart-fill' : 'heart'" :color="isCollected ? '#ff4d4f' : '#333'" size="44"></u-icon>
+					<text :class="{ active: isCollected }">收藏</text>
+				</view>
 			</view>
-			<view class="action-item" @click="contactSeller">
-				<u-icon name="chat" color="#999" size="40"></u-icon>
-				<text>联系</text>
+			<view class="footer-right">
+				<u-button 
+					type="error" 
+					shape="circle" 
+					class="contact-btn"
+					@click="contactSeller"
+				>
+					联系商家
+				</u-button>
 			</view>
-			<u-button 
-				type="warning" 
-				shape="circle" 
-				class="contact-btn" 
-				@click="openBidKeyboard"
-				:disabled="!canBid"
-			>
-				<u-icon name="gift" color="#fff" size="28"></u-icon>
-				<text>我要出价</text>
-			</u-button>
-			<u-button 
-				type="error" 
-				shape="circle" 
-				class="buy-btn" 
-				v-if="!canBid"
-				:disabled="true"
-			>
-				{{ auctionStatus.isActive ? '拍卖进行中' : '拍卖已结束' }}
-			</u-button>
 		</view>
 	</view>
 </template>
@@ -491,26 +374,23 @@ export default {
 			this.bidPrice = newPrice.toString()
 		},
 		async submitBid() {
-			if (!this.canSubmitBid) {
-				return
-			}
-			const price = Number(this.bidPrice)
-			if (!this.$utils.validateBidPrice(price, this.auctionStatus.currentPrice, this.auctionStatus.increment)) {
-				this.bidError = `出价必须高于当前价格，且每次加价至少${this.auctionStatus.increment}元`
+			if (!this.bidMessage.trim()) {
 				return
 			}
 			this.isSubmitting = true
 			try {
-				await this.$store.dispatch('placeBid', {
-					auctionId: this.auctionId || 'mock_1',
-					price: price,
+				const newComment = {
+					id: Date.now(),
+					username: '我',
+					avatarBg: '#FF6B35',
+					createTime: Date.now(),
 					message: this.bidMessage
-				})
-				this.closeBidKeyboard()
-				this.$utils.toast('出价成功')
+				}
+				this.$store.commit('setBidHistory', [newComment, ...this.bidHistory])
+				this.bidMessage = '' // 清空输入框
+				this.$utils.toast('留言成功')
 			} catch (error) {
-				console.error('出价失败:', error)
-				this.$utils.toast(error.message || '出价失败')
+				this.$utils.toast('发布失败')
 			} finally {
 				this.isSubmitting = false
 			}
@@ -521,9 +401,212 @@ export default {
 
 <style lang="scss" scoped>
 .detail-page {
+	padding-bottom: 0;
+	background-color: #f8f8f8;
 	min-height: 100vh;
-	background-color: #f5f5f5;
-	padding-bottom: 120rpx;
+}
+
+.section-title {
+	display: flex;
+	align-items: center;
+	margin-bottom: 20rpx;
+	
+	text {
+		font-size: 32rpx;
+		color: #333;
+		font-weight: 600;
+	}
+	
+	.comment-count {
+		font-size: 26rpx;
+		color: #999;
+		margin-left: 8rpx;
+		font-weight: normal;
+	}
+}
+
+.desc-card {
+	margin: 20rpx;
+	padding: 30rpx;
+	background-color: #fff;
+	border-radius: 24rpx;
+
+	.desc-content {
+		font-size: 28rpx;
+		color: #444;
+		line-height: 1.6;
+		display: block;
+	}
+}
+
+.comment-section {
+	margin: 20rpx;
+	padding: 30rpx;
+	background-color: #fff;
+	border-radius: 24rpx;
+
+	.comment-input-bar {
+		display: flex;
+		align-items: center;
+		gap: 20rpx;
+		margin-bottom: 40rpx;
+
+		.input-wrapper {
+			flex: 1;
+			height: 80rpx;
+			background-color: #f5f7fa;
+			border-radius: 40rpx;
+			padding: 0 30rpx;
+			display: flex;
+			align-items: center;
+
+			input {
+				width: 100%;
+				font-size: 28rpx;
+				color: #333;
+			}
+		}
+
+		.add-btn {
+			width: 80rpx;
+			height: 80rpx;
+			background-color: #ff4d4f;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 4rpx 12rpx rgba(255, 77, 79, 0.3);
+
+			&:active {
+				opacity: 0.8;
+				transform: scale(0.95);
+			}
+		}
+	}
+
+	.comment-list {
+		.comment-item {
+			display: flex;
+			gap: 20rpx;
+			margin-bottom: 30rpx;
+
+			&:last-child {
+				margin-bottom: 0;
+			}
+
+			.user-avatar {
+				width: 72rpx;
+				height: 72rpx;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-shrink: 0;
+				
+				text {
+					color: #fff;
+					font-size: 28rpx;
+					font-weight: 500;
+				}
+			}
+
+			.comment-body {
+				flex: 1;
+				padding-bottom: 20rpx;
+				border-bottom: 1rpx solid #f0f0f0;
+
+				.comment-header {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					margin-bottom: 8rpx;
+
+					.username {
+						font-size: 26rpx;
+						color: #666;
+						font-weight: 500;
+					}
+
+					.time {
+						font-size: 22rpx;
+						color: #999;
+					}
+				}
+
+				.content {
+					font-size: 28rpx;
+					color: #333;
+					line-height: 1.5;
+				}
+			}
+			
+			&:last-child .comment-body {
+				border-bottom: none;
+			}
+		}
+
+		.empty-comment {
+			padding: 60rpx 0;
+			text-align: center;
+			
+			text {
+				font-size: 26rpx;
+				color: #999;
+			}
+		}
+	}
+}
+
+.safe-bottom-placeholder {
+	height: calc(120rpx + env(safe-area-inset-bottom));
+}
+
+.footer-bar {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 100rpx;
+	background-color: #fff;
+	display: flex;
+	align-items: center;
+	padding: 0 30rpx;
+	padding-bottom: env(safe-area-inset-bottom);
+	box-shadow: 0 -2rpx 20rpx rgba(0, 0, 0, 0.04);
+	z-index: 100;
+
+	.footer-left {
+		display: flex;
+		align-items: center;
+		
+		.footer-action {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding: 0 20rpx;
+			
+			text {
+				font-size: 20rpx;
+				color: #666;
+				margin-top: 4rpx;
+				
+				&.active {
+					color: #ff4d4f;
+				}
+			}
+		}
+	}
+
+	.footer-right {
+		flex: 1;
+		margin-left: 40rpx;
+		
+		.contact-btn {
+			width: 100%;
+			height: 80rpx;
+			font-weight: 600;
+		}
+	}
 }
 
 .image-section {
@@ -736,7 +819,7 @@ export default {
 	}
 }
 
-.history-card {
+.message-board-card {
 	margin: 0 20rpx 20rpx;
 	padding: 24rpx;
 	background-color: #fff;
@@ -746,9 +829,7 @@ export default {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 20rpx;
-		padding-bottom: 16rpx;
-		border-bottom: 1rpx solid #f0f0f0;
+		margin-bottom: 24rpx;
 
 		.history-title {
 			font-size: 30rpx;
@@ -763,75 +844,59 @@ export default {
 	}
 
 	.history-list {
-		max-height: 400rpx;
-	}
-
-	.history-item {
-		display: flex;
-		align-items: flex-start;
-		gap: 16rpx;
-		padding: 16rpx 0;
-		border-bottom: 1rpx solid #f5f5f5;
-
-		&:last-child {
-			border-bottom: none;
-		}
-
-		.history-avatar {
-			width: 64rpx;
-			height: 64rpx;
-			border-radius: 50%;
+		.history-item {
 			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-shrink: 0;
+			gap: 16rpx;
+			padding-bottom: 24rpx;
+			margin-bottom: 24rpx;
+			border-bottom: 1rpx solid #f0f0f0;
 
-			.history-avatar-text {
-				color: #fff;
-				font-size: 26rpx;
-				font-weight: 500;
+			&:last-child {
+				padding-bottom: 0;
+				margin-bottom: 0;
+				border-bottom: none;
 			}
-		}
 
-		.history-content {
-			flex: 1;
-			min-width: 0;
-
-			.history-row {
+			.history-avatar {
+				width: 64rpx;
+				height: 64rpx;
+				border-radius: 50%;
 				display: flex;
-				justify-content: space-between;
 				align-items: center;
-				margin-bottom: 8rpx;
+				justify-content: center;
+				flex-shrink: 0;
 
-				.history-name {
+				.history-avatar-text {
+					color: #fff;
+					font-size: 24rpx;
+				}
+			}
+
+			.history-content {
+				flex: 1;
+
+				.history-row {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					margin-bottom: 8rpx;
+
+					.history-name {
+						font-size: 26rpx;
+						color: #666;
+					}
+
+					.history-time {
+						font-size: 22rpx;
+						color: #999;
+					}
+				}
+
+				.history-message {
 					font-size: 28rpx;
 					color: #333;
-					font-weight: 500;
+					line-height: 1.5;
 				}
-
-				.history-time {
-					font-size: 22rpx;
-					color: #999;
-				}
-			}
-
-			.history-bid {
-				display: flex;
-				align-items: center;
-				gap: 12rpx;
-				margin-bottom: 4rpx;
-
-				.history-price {
-					font-size: 30rpx;
-					color: #ff4d4f;
-					font-weight: 600;
-				}
-			}
-
-			.history-message {
-				font-size: 24rpx;
-				color: #999;
-				margin-top: 4rpx;
 			}
 		}
 	}
@@ -865,16 +930,14 @@ export default {
 }
 
 .bid-keyboard-popup {
+	padding: 30rpx;
 	background-color: #fff;
-	border-radius: 32rpx 32rpx 0 0;
-	padding-bottom: env(safe-area-inset-bottom);
 
 	.keyboard-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 32rpx;
-		border-bottom: 1rpx solid #f0f0f0;
+		margin-bottom: 30rpx;
 
 		.keyboard-title {
 			font-size: 32rpx;
@@ -884,161 +947,63 @@ export default {
 	}
 
 	.keyboard-content {
-		padding: 32rpx;
-
-		.current-price-info,
-		.min-bid-info {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			margin-bottom: 16rpx;
-
-			.label {
-				font-size: 26rpx;
-				color: #666;
-			}
-
-			.price {
-				font-size: 36rpx;
-				color: #ff4d4f;
-				font-weight: 600;
-			}
-
-			.min-price {
-				font-size: 28rpx;
-				color: #ff4d4f;
-			}
-		}
-
-		.bid-input-section {
-			margin-top: 24rpx;
-			margin-bottom: 24rpx;
-
-			.input-label {
-				font-size: 26rpx;
-				color: #666;
-				margin-bottom: 12rpx;
-			}
-
-			.input-wrap {
-				display: flex;
-				align-items: center;
-				background-color: #f5f5f5;
-				border-radius: 16rpx;
-				padding: 24rpx;
-
-				.input-symbol {
-					font-size: 32rpx;
-					color: #333;
-					font-weight: 600;
-					margin-right: 8rpx;
-				}
-
-				.bid-input {
-					flex: 1;
-					font-size: 40rpx;
-					color: #333;
-					font-weight: 600;
-				}
-			}
-
-			.error-text {
-				font-size: 24rpx;
-				color: #ff4d4f;
-				margin-top: 8rpx;
-			}
-		}
-
-		.quick-bid-section {
-			margin-bottom: 24rpx;
-
-			.quick-bid-title {
-				font-size: 26rpx;
-				color: #666;
-				margin-bottom: 16rpx;
-			}
-
-			.quick-bid-btns {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 16rpx;
-
-				.quick-btn {
-					flex: 1;
-					min-width: 100rpx;
-					padding: 16rpx;
-					background-color: #f5f5f5;
-					border-radius: 12rpx;
-					text-align: center;
-
-					text {
-						font-size: 28rpx;
-						color: #333;
-						font-weight: 500;
-					}
-
-					&:active {
-						background-color: #e8e8e8;
-					}
-				}
-			}
-		}
-
 		.message-section {
-			margin-bottom: 32rpx;
-
-			.input-label {
-				font-size: 26rpx;
-				color: #666;
-				margin-bottom: 12rpx;
-			}
+			margin-bottom: 40rpx;
 
 			.message-input-wrap {
-				background-color: #f5f5f5;
-				border-radius: 16rpx;
-				padding: 20rpx 24rpx;
+				background-color: #f5f7fa;
+				border-radius: 12rpx;
+				padding: 20rpx;
+				position: relative;
 
-				.message-input {
+				.message-textarea {
+					width: 100%;
+					height: 200rpx;
 					font-size: 28rpx;
 					color: #333;
+				}
+
+				.word-count {
+					position: absolute;
+					bottom: 10rpx;
+					right: 20rpx;
+					font-size: 22rpx;
+					color: #999;
 				}
 			}
 		}
 
 		.submit-bid-btn {
+			width: 100%;
 			height: 88rpx;
-			font-size: 32rpx;
-			font-weight: 600;
 		}
 	}
 }
 
 .bottom-bar {
 	position: fixed;
-	left: 0;
 	bottom: 0;
-	width: 100%;
+	left: 0;
+	right: 0;
 	height: 110rpx;
 	background-color: #fff;
-	border-top: 1rpx solid #f0f0f0;
 	display: flex;
 	align-items: center;
-	padding: 0 20rpx;
-	padding-bottom: calc(10rpx + env(safe-area-inset-bottom));
-	box-sizing: border-box;
-	gap: 16rpx;
+	padding: 0 30rpx;
+	padding-bottom: env(safe-area-inset-bottom);
+	box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+	z-index: 100;
 
 	.action-item {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
-		width: 100rpx;
+		margin-right: 40rpx;
 		gap: 4rpx;
 
 		text {
-			font-size: 22rpx;
-			color: #999;
+			font-size: 20rpx;
+			color: #666;
 
 			&.collected {
 				color: #ff4d4f;
@@ -1046,20 +1011,18 @@ export default {
 		}
 	}
 
-	.contact-btn {
+	.buy-btn {
 		flex: 1;
-		height: 76rpx;
-		font-size: 28rpx;
+		height: 80rpx;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 8rpx;
-	}
 
-	.buy-btn {
-		flex: 1;
-		height: 76rpx;
-		font-size: 28rpx;
+		text {
+			font-size: 30rpx;
+			font-weight: 600;
+		}
 	}
 }
 </style>

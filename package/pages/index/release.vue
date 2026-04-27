@@ -186,6 +186,23 @@
 					sourceType: ['album', 'camera'],
 					success: (res) => {
 						this.images = this.images.concat(res.tempFilePaths);
+					},
+					fail: (err) => {
+						console.error('选择图片失败:', err);
+						if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+							uni.showModal({
+								title: '提示',
+								content: '需要您的相册或相机许可才能选择图片，请前往设置开启',
+								confirmText: '去设置',
+								success: (res) => {
+									if (res.confirm) {
+										uni.openSetting();
+									}
+								}
+							});
+						} else if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+							uni.showToast({title: '选择图片失败', icon: 'none'});
+						}
 					}
 				});
 			},

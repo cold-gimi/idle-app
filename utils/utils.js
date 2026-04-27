@@ -1,5 +1,6 @@
 import store from "./store";
 import NAMEPATH from "./namepath"
+const baseUrlTarget = 'http://localhost:8080'
 const utils = {
   longLogin() {
     return new Promise((resolve, reject) => {
@@ -146,6 +147,20 @@ const utils = {
   setTitle(title) {
     uni.setNavigationBarTitle({
       title,
+    });
+  },
+  upload: function (options) {
+    // Mock 实现：直接返回本地路径作为上传后的 URL
+    return new Promise((resolve) => {
+      console.log('Mock 上传中...', options.filePath);
+      setTimeout(() => {
+        resolve({
+          success: true,
+          data: {
+            url: options.filePath // Mock 返回本地路径
+          }
+        });
+      }, 1000);
     });
   },
   request: function (options) {
