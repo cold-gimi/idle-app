@@ -43,6 +43,13 @@
       "root": "package",
       "pages": [
         {
+          "path": "pages/search/search",
+          "style": {
+            "navigationBarTitleText": "搜索",
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
           "path": "pages/position/search",
           "style": {
             "navigationBarTitleText": "搜索",
@@ -66,6 +73,13 @@
           "path": "pages/index/release",
           "style": {
             "navigationBarTitleText": "发布闲置"
+          }
+        },
+        {
+          "path": "pages/chat/chat",
+          "style": {
+            "navigationBarTitleText": "",
+            "navigationStyle": "custom"
           }
         }
       ]
