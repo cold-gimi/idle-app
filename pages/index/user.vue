@@ -4,8 +4,15 @@
 			<cp-login></cp-login>
 		</template>
 		<template v-else>
+			<u-navbar
+				title="个人中心"
+				:is-back="false"
+				:background="{ backgroundImage: 'linear-gradient(135deg, #FF8C70 0%, #FF6B6B 50%, #FF7F50 100%)' }"
+				title-color="#fff"
+				:border-bottom="false"
+			></u-navbar>
 			<view class="user-header">
-				<view class="user-info">
+				<view class="user-info" @click="goToProfile">
 					<view class="avatar-wrapper">
 						<image class="avatar" :src="userInfo.avatar || '/static/logo.png'" mode="aspectFill"></image>
 						<view class="online-status"></view>
@@ -72,7 +79,7 @@
 					</view>
 				</view>
 				<view class="publication-list">
-					<view class="publication-item" v-for="(item, index) in publications" :key="index" @click="goToDetail(item)">
+					<view class="publication-item" v-for="(item, index) in publications" :key="index" @click="goToEdit(item)">
 						<view class="item-image-wrapper" :style="{background: item.bgColor}">
 							<image class="item-image" :src="item.image" mode="aspectFit"></image>
 							<view class="item-status" v-if="item.status">{{item.status}}</view>
@@ -86,23 +93,30 @@
 			</view>
 			
 			<view class="menu-section">
-				<view class="menu-item" @click="goToAccount">
+				<view class="menu-item" @click="goToProfile">
 					<view class="menu-icon-wrapper" style="background: #D0F0E0;">
-						<u-icon name="lock-fill" color="#2ECC71" size="28"></u-icon>
+						<u-icon name="account-fill" color="#2ECC71" size="28"></u-icon>
+					</view>
+					<view class="menu-title">个人信息</view>
+					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
+				</view>
+				<view class="menu-item" @click="goToAccount">
+					<view class="menu-icon-wrapper" style="background: #FFE4D6;">
+						<u-icon name="lock-fill" color="#E67E22" size="28"></u-icon>
 					</view>
 					<view class="menu-title">账号与安全</view>
 					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
 				</view>
-				<view class="menu-item" @click="goToAddress">
-					<view class="menu-icon-wrapper" style="background: #FFE4D6;">
-						<u-icon name="map-pin-fill" color="#E67E22" size="28"></u-icon>
+				<view class="menu-item" @click="goToArticle">
+					<view class="menu-icon-wrapper" style="background: #E0E8FF;">
+						<u-icon name="file-text-fill" color="#3498DB" size="28"></u-icon>
 					</view>
-					<view class="menu-title">收货地址</view>
+					<view class="menu-title">文章列表</view>
 					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
 				</view>
 				<view class="menu-item" @click="goToAbout">
-					<view class="menu-icon-wrapper" style="background: #E0E8FF;">
-						<u-icon name="info-circle-fill" color="#3498DB" size="28"></u-icon>
+					<view class="menu-icon-wrapper" style="background: #F0E0FF;">
+						<u-icon name="info-circle-fill" color="#9B59B6" size="28"></u-icon>
 					</view>
 					<view class="menu-title">关于闲置宝</view>
 					<u-icon name="arrow-right" color="#ccc" size="24"></u-icon>
@@ -179,9 +193,19 @@
 					url: '/pages/user/manage'
 				})
 			},
+			goToEdit(item) {
+				uni.navigateTo({
+					url: `/package/pages/index/release?id=${item.id}&edit=true`
+				})
+			},
 			goToDetail(item) {
 				uni.navigateTo({
 					url: `/package/pages/index/detail?id=${item.id}`
+				})
+			},
+			goToProfile() {
+				uni.navigateTo({
+					url: '/package/pages/user/profile'
 				})
 			},
 			goToAccount() {
@@ -189,14 +213,14 @@
 					url: '/pages/user/account'
 				})
 			},
-			goToAddress() {
+			goToArticle() {
 				uni.navigateTo({
-					url: '/pages/user/address'
+					url: '/package/pages/user/article'
 				})
 			},
 			goToAbout() {
 				uni.navigateTo({
-					url: '/pages/user/about'
+					url: '/package/pages/user/article-detail?id=about'
 				})
 			},
 			handleLogout() {
