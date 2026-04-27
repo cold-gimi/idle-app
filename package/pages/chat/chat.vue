@@ -1,5 +1,33 @@
 <template>
 	<view class="chat-page">
+		<!-- 自定义导航栏 -->
+		<u-navbar 
+			title="" 
+			:is-back="true" 
+			back-icon-name="nav-back"
+			back-icon-color="#333"
+			:background="{ backgroundColor: '#fff' }"
+			:border-bottom="true"
+		>
+			<view class="navbar-center" slot="default">
+				<view class="user-info">
+					<view class="avatar" style="background: #FF6B35;">
+						<text class="avatar-text">{{ shopName ? shopName.charAt(0) : '?' }}</text>
+					</view>
+					<view class="user-detail">
+						<text class="nickname">{{ shopName || '商家' }}</text>
+						<view class="status">
+							<view class="status-dot online"></view>
+							<text class="status-text">在线</text>
+						</view>
+					</view>
+				</view>
+			</view>
+			<view class="navbar-right" slot="right">
+				<u-icon name="more-dot" color="#333" size="40" @click="showMoreMenu"></u-icon>
+			</view>
+		</u-navbar>
+		
 		<!-- 聊天消息列表 -->
 		<scroll-view 
 			scroll-y 
@@ -93,18 +121,20 @@
 		</scroll-view>
 		
 		<!-- 底部输入区域 -->
-		<view class="input-area" :class="{ 'expanded': showMoreTools }">
-			<!-- 表情和更多按钮 -->
+		<view class="input-area" :class="{ 'expanded': showMoreTools || showEmoji }">
+			<!-- 输入工具栏 -->
 			<view class="input-toolbar">
-				<view class="tool-btn" @click="toggleEmoji">
-					<u-icon :name="showEmoji ? 'keyboard' : 'face'" color="#666" size="48"></u-icon>
+				<!-- 左侧麦克风按钮 -->
+				<view class="tool-btn" @click="toggleVoiceInput">
+					<u-icon name="mic-fill" color="#666" size="48"></u-icon>
 				</view>
 				
+				<!-- 输入框 -->
 				<view class="input-wrapper">
 					<textarea 
 						v-model="inputText"
 						class="chat-input"
-						placeholder="输入消息..."
+						placeholder="发消息..."
 						:maxlength="500"
 						:adjust-position="false"
 						@focus="onInputFocus"
@@ -112,12 +142,21 @@
 					></textarea>
 				</view>
 				
+				<!-- 表情按钮 -->
+				<view class="tool-btn" @click="toggleEmoji">
+					<u-icon :name="showEmoji ? 'keyboard' : 'face'" color="#666" size="48"></u-icon>
+				</view>
+				
+				<!-- 更多按钮 -->
 				<view class="tool-btn" v-if="!inputText" @click="toggleMoreTools">
 					<u-icon :name="showMoreTools ? 'keyboard' : 'plus'" color="#666" size="48"></u-icon>
 				</view>
 				
+				<!-- 发送按钮 -->
 				<view class="send-btn" v-if="inputText" @click="sendTextMessage">
-					<u-button type="primary" size="mini">发送</u-button>
+					<view class="send-icon">
+						<u-icon name="arrow-right" color="#fff" size="32"></u-icon>
+					</view>
 				</view>
 			</view>
 			
@@ -140,6 +179,7 @@
 			<!-- 更多工具面板 -->
 			<view class="more-tools-panel" v-if="showMoreTools">
 				<view class="tools-grid">
+					<!-- 图片 -->
 					<view class="tool-item" @click="chooseImage">
 						<view class="tool-icon">
 							<u-icon name="photo" color="#FF6B35" size="48"></u-icon>
@@ -147,27 +187,23 @@
 						<text class="tool-label">图片</text>
 					</view>
 					
+					<!-- 拍摄 -->
+					<view class="tool-item" @click="takePhoto">
+						<view class="tool-icon">
+							<u-icon name="camera" color="#1890FF" size="48"></u-icon>
+						</view>
+						<text class="tool-label">拍摄</text>
+					</view>
+					
+					<!-- 视频 -->
 					<view class="tool-item" @click="chooseVideo">
 						<view class="tool-icon">
-							<u-icon name="video" color="#1890FF" size="48"></u-icon>
+							<u-icon name="video" color="#52c41a" size="48"></u-icon>
 						</view>
 						<text class="tool-label">视频</text>
 					</view>
 					
-					<view class="tool-item">
-						<view 
-							class="tool-icon voice-btn" 
-							:class="{ 'recording': isRecording, 'cancel-area': isInCancelArea }"
-							@touchstart="onVoiceTouchStart"
-							@touchmove="onVoiceTouchMove"
-							@touchend="onVoiceTouchEnd"
-							@touchcancel="onVoiceTouchEnd"
-						>
-							<u-icon name="mic" :color="isRecording ? '#ff4d4f' : '#52c41a'" size="48"></u-icon>
-						</view>
-						<text class="tool-label">{{ isRecording ? '松开结束' : '按住录音' }}</text>
-					</view>
-					
+					<!-- 位置 -->
 					<view class="tool-item" @click="chooseLocation">
 						<view class="tool-icon">
 							<u-icon name="map" color="#722ED1" size="48"></u-icon>
@@ -268,11 +304,6 @@ export default {
 		if (options.goodsId) {
 			this.goodsId = options.goodsId;
 		}
-		
-		// 设置页面标题
-		uni.setNavigationBarTitle({
-			title: this.shopName || '商家'
-		});
 		
 		// 初始化WebSocket连接
 		this.initWebSocket();
@@ -456,7 +487,22 @@ export default {
 			uni.chooseImage({
 				count: 9,
 				sizeType: ['original', 'compressed'],
-				sourceType: ['album', 'camera'],
+				sourceType: ['album'],
+				success: (res) => {
+					const tempFilePaths = res.tempFilePaths;
+					tempFilePaths.forEach((filePath, index) => {
+						this.sendImageMessage(filePath, index);
+					});
+				}
+			});
+		},
+		
+		// 拍照
+		takePhoto() {
+			uni.chooseImage({
+				count: 1,
+				sizeType: ['original', 'compressed'],
+				sourceType: ['camera'],
 				success: (res) => {
 					const tempFilePaths = res.tempFilePaths;
 					tempFilePaths.forEach((filePath, index) => {
@@ -726,6 +772,34 @@ export default {
 			});
 		},
 		
+		// 显示更多菜单（导航栏右侧）
+		showMoreMenu() {
+			uni.showActionSheet({
+				itemList: ['查看资料', '清空聊天记录'],
+				success: (res) => {
+					if (res.tapIndex === 0) {
+						this.$utils.toast('查看资料功能开发中');
+					} else if (res.tapIndex === 1) {
+						uni.showModal({
+							title: '提示',
+							content: '确定要清空聊天记录吗？',
+							success: (modalRes) => {
+								if (modalRes.confirm) {
+									this.messages = [];
+									this.$utils.toast('已清空聊天记录');
+								}
+							}
+						});
+					}
+				}
+			});
+		},
+		
+		// 切换语音输入
+		toggleVoiceInput() {
+			this.$utils.toast('语音输入功能开发中');
+		},
+		
 		// 切换表情面板
 		toggleEmoji() {
 			this.showEmoji = !this.showEmoji;
@@ -904,6 +978,89 @@ export default {
 	flex-direction: column;
 	height: 100vh;
 	background-color: #f5f5f5;
+}
+
+// 导航栏中心区域样式
+.navbar-center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
+
+.user-info {
+	display: flex;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.user-info .avatar {
+	width: 56rpx;
+	height: 56rpx;
+	margin: 0;
+	border-radius: 50%;
+	box-shadow: none;
+}
+
+.user-info .avatar .avatar-text {
+	font-size: 24rpx;
+}
+
+.user-detail {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.nickname {
+	font-size: 30rpx;
+	font-weight: 500;
+	color: #333;
+	line-height: 1.2;
+}
+
+.status {
+	display: flex;
+	align-items: center;
+	gap: 6rpx;
+}
+
+.status-dot {
+	width: 12rpx;
+	height: 12rpx;
+	border-radius: 50%;
+	
+	&.online {
+		background-color: #52c41a;
+	}
+}
+
+.status-text {
+	font-size: 22rpx;
+	color: #999;
+	line-height: 1.2;
+}
+
+// 导航栏右侧样式
+.navbar-right {
+	padding-right: 16rpx;
+	display: flex;
+	align-items: center;
+}
+
+// 发送按钮样式
+.send-btn {
+	flex-shrink: 0;
+}
+
+.send-icon {
+	width: 64rpx;
+	height: 64rpx;
+	background-color: #FF6B35;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .message-list {
