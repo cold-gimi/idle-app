@@ -29,6 +29,15 @@
 				</view>
 			</view>
 			<text class="goods-title">{{ auctionDetail.title }}</text>
+			
+			<!-- 标签区域 -->
+			<view class="tags-section">
+				<view class="tag-item" v-for="(tag, index) in auctionTags" :key="index">
+					<u-icon v-if="tag.icon" :name="tag.icon" :color="tag.color" size="24"></u-icon>
+					<text :style="{ color: tag.color }">{{ tag.name }}</text>
+				</view>
+			</view>
+
 			<view class="meta-row">
 				<view class="meta-item">
 					<u-icon name="map-fill" color="#999" size="24"></u-icon>
@@ -43,18 +52,6 @@
 					<text>{{ auctionDetail.views }}次浏览</text>
 				</view>
 			</view>
-
-			<!-- 统计信息 -->
-			<view class="stats-row">
-				<view class="stat-item" @click="goToWantList">
-					<text class="stat-num">{{ auctionDetail.wantCount || 0 }}</text>
-					<text class="stat-label">想买</text>
-				</view>
-				<view class="stat-item" @click="goToCollectList">
-					<text class="stat-num">{{ auctionDetail.collectCount || 0 }}</text>
-					<text class="stat-label">收藏</text>
-				</view>
-			</view>
 		</view>
 
 		<!-- 商品描述 -->
@@ -65,77 +62,69 @@
 			<text class="desc-content">{{ auctionDetail.description }}</text>
 			
 			<!-- 商品属性列表 -->
-			<view class="attr-list">
-				<view class="attr-item">
-					<text class="attr-label">成色</text>
+			<view class="attr-section">
+				<view class="attr-row" v-for="(attr, index) in auctionAttrs" :key="index">
+					<text class="attr-label">{{ attr.label }}</text>
 					<view class="attr-value">
-						<view class="value-badge">
-							<text>{{ auctionDetail.condition }}</text>
+						<view class="attr-badge" :class="attr.type" v-if="attr.isBadge">
+							<text>{{ attr.value }}</text>
 						</view>
-					</view>
-				</view>
-				<view class="attr-item">
-					<text class="attr-label">购入时间</text>
-					<text class="attr-text">{{ auctionDetail.purchaseTime }}</text>
-				</view>
-				<view class="attr-item">
-					<text class="attr-label">交易方式</text>
-					<text class="attr-text">{{ auctionDetail.tradeMethod }}</text>
-				</view>
-				<view class="attr-item">
-					<text class="attr-label">是否议价</text>
-					<view class="attr-value">
-						<view class="value-badge green">
-							<text>{{ auctionDetail.canNegotiate }}</text>
-						</view>
+						<text class="attr-text" v-else>{{ attr.value }}</text>
 					</view>
 				</view>
 			</view>
 		</view>
 
-		<!-- 卖家详情 -->
-		<view class="seller-card">
-			<view class="seller-header">
-				<view class="seller-info" @click="goToSellerHome">
+		<!-- 卖家详情卡片 -->
+		<view class="seller-card" @click="goToSellerHome">
+			<view class="seller-header-bg">
+				<view class="seller-info">
 					<view class="seller-avatar">
 						<image :src="sellerInfo.avatar" mode="aspectFill"></image>
 					</view>
 					<view class="seller-detail">
 						<view class="seller-name-row">
 							<text class="seller-name">{{ sellerInfo.name }}</text>
-							<view class="verify-tags">
-								<view class="verify-tag" v-if="sellerInfo.isVerified">
-									<u-icon name="shield-checkmark" color="#fff" size="20"></u-icon>
-									<text>实名认证</text>
-								</view>
-								<view class="verify-tag credit" v-if="sellerInfo.hasCredit">
-									<u-icon name="star" color="#fff" size="20"></u-icon>
-									<text>信用优秀</text>
-								</view>
+						</view>
+						<view class="verify-tags">
+							<view class="verify-tag" v-if="sellerInfo.isVerified">
+								<u-icon name="shield-checkmark" color="#fff" size="20"></u-icon>
+								<text>实名认证</text>
+							</view>
+							<view class="verify-tag credit" v-if="sellerInfo.hasCredit">
+								<u-icon name="star" color="#fff" size="20"></u-icon>
+								<text>信用优秀</text>
 							</view>
 						</view>
+						<view class="seller-rating">
+							<text class="rating-num">{{ sellerStats.goodRate }}</text>
+							<view class="stars">
+								<u-icon v-for="n in 5" :key="n" name="star-fill" color="#FFD700" size="24"></u-icon>
+							</view>
+							<text class="rating-desc">★★★★★ · 超赞商家</text>
+						</view>
 					</view>
-				</view>
-				<view class="follow-btn" :class="{ followed: isFollowed }" @click="toggleFollow">
-					<text>{{ isFollowed ? '已关注' : '+ 关注' }}</text>
 				</view>
 			</view>
 			
 			<!-- 卖家统计 -->
 			<view class="seller-stats">
-				<view class="stat-item" @click="goToSellerOnSale">
+				<view class="stat-item" @click.stop="goToSellerOnSale">
 					<text class="stat-num">{{ sellerStats.onSale }}</text>
 					<text class="stat-label">在售</text>
 				</view>
-				<view class="stat-item" @click="goToSellerSold">
+				<view class="stat-divider"></view>
+				<view class="stat-item" @click.stop="goToSellerSold">
 					<text class="stat-num">{{ sellerStats.sold }}</text>
 					<text class="stat-label">已售</text>
 				</view>
+				<view class="stat-divider"></view>
 				<view class="stat-item">
 					<text class="stat-num">{{ sellerStats.goodRate }}%</text>
 					<text class="stat-label">好评率</text>
 				</view>
-				<view class="stat-item" @click="goToSellerFans">
+				<view class="stat-divider"></view>
+				<view class="stat-item" @click.stop="goToSellerFans">
 					<text class="stat-num">{{ sellerStats.fans }}</text>
 					<text class="stat-label">粉丝</text>
 				</view>
@@ -144,29 +133,59 @@
 			<!-- 买家评价 -->
 			<view class="reviews-section" v-if="sellerReviews.length > 0">
 				<view class="section-header">
-					<text class="section-title">买家评价</text>
-					<view class="view-all" @click="goToAllReviews">
-						<text>全部 {{ sellerReviews.length }} 条</text>
-						<u-icon name="arrow-right" color="#999" size="20"></u-icon>
+					<view class="section-title-wrap">
+						<text class="section-title">买家评价</text>
+						<text class="section-count">全部 106 条</text>
+					</view>
+					<view class="section-tabs">
+						<text class="tab-item active">好评 98%</text>
+						<text class="tab-item">中评</text>
+						<text class="tab-item">差评</text>
+						<text class="tab-item">有图</text>
 					</view>
 				</view>
 				<view class="reviews-list">
 					<view class="review-item" v-for="(review, index) in displayedReviews" :key="index">
 						<view class="reviewer-info">
-							<text class="reviewer-name">{{ review.userName }}</text>
-							<view class="stars">
-								<u-icon v-for="n in 5" :key="n" :name="n <= review.rating ? 'star-fill' : 'star'" color="#FFD700" size="24"></u-icon>
+							<view class="reviewer-avatar">
+								<text>{{ review.userName.charAt(0) }}</text>
 							</view>
+							<view class="reviewer-detail">
+								<text class="reviewer-name">{{ review.userName }}</text>
+								<view class="stars">
+									<u-icon v-for="n in 5" :key="n" :name="n <= review.rating ? 'star-fill' : 'star'" color="#FFD700" size="20"></u-icon>
+								</view>
+							</view>
+							<text class="review-time">3天前</text>
 						</view>
 						<text class="review-content">{{ review.content }}</text>
 					</view>
 				</view>
 			</view>
 			
-			<!-- 更多宝贝 -->
-			<view class="more-goods" @click="goToSellerAllGoods">
-				<text class="more-text">查看商家全部 {{ sellerStats.onSale }} 件在售宝贝</text>
-				<u-icon name="arrow-right" color="#999" size="24"></u-icon>
+			<!-- 在售宝贝 -->
+			<view class="goods-section">
+				<view class="section-header">
+					<text class="section-title">在售宝贝</text>
+					<view class="view-all" @click.stop="goToSellerAllGoods">
+						<text>共 8 件</text>
+						<u-icon name="arrow-right" color="#999" size="20"></u-icon>
+					</view>
+				</view>
+				<view class="goods-grid">
+					<view class="goods-item" v-for="(goods, index) in sellerGoods" :key="index" @click.stop="viewGoodsDetail(goods)">
+						<view class="goods-image" :style="{ background: goods.bgColor }">
+							<image :src="goods.image" mode="aspectFit"></image>
+						</view>
+						<view class="goods-info">
+							<text class="goods-name">{{ goods.name }}</text>
+							<view class="goods-price">
+								<text class="price-symbol">¥</text>
+								<text class="price-num">{{ goods.price }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
 			</view>
 		</view>
 
@@ -175,6 +194,17 @@
 			<view class="section-title">
 				<text>卖家留言</text>
 				<text class="comment-count">({{ commentList.length }})</text>
+			</view>
+			
+			<!-- 留言输入框 -->
+			<view class="comment-input-wrap" @click="showCommentPopup">
+				<view class="avatar-small">
+					<text>😊</text>
+				</view>
+				<text class="input-placeholder">说点什么...</text>
+				<view class="send-btn">
+					<u-icon name="plus" color="#fff" size="28"></u-icon>
+				</view>
 			</view>
 			
 			<!-- 留言列表 -->
@@ -228,19 +258,6 @@
 				</u-button>
 			</view>
 		</view>
-		
-		<!-- 留言输入框 (悬浮) -->
-		<view class="input-bar">
-			<view class="input-wrapper" @click="focusCommentInput">
-				<view class="avatar-small">
-					<text>😊</text>
-				</view>
-				<text class="input-placeholder">说点什么...</text>
-			</view>
-			<view class="send-btn" @click="showCommentPopup">
-				<u-icon name="paperplane-fill" color="#fff" size="32"></u-icon>
-			</view>
-		</view>
 	</view>
 </template>
 
@@ -271,6 +288,19 @@ export default {
 				canNegotiate: '可小刀',
 				description: '买了一年多，使用完好，无磕碰，屏幕无划痕。电池健康度 94%。原装充电器、数据线均在，随机盒子也有。因换新机处理，价格已让，非诚勿扰。'
 			},
+			// 商品标签
+			auctionTags: [
+				{ name: '本地卖家', icon: 'map-fill', color: '#1890ff' },
+				{ name: '正品保障', icon: 'shield-checkmark', color: '#52c41a' },
+				{ name: '可议价', icon: 'gift', color: '#ff4d4f' }
+			],
+			// 商品属性
+			auctionAttrs: [
+				{ label: '成色', value: '几乎全新', isBadge: true, type: 'gold' },
+				{ label: '购入时间', value: '2024年3月', isBadge: false },
+				{ label: '交易方式', value: '自提 / 同城配送', isBadge: false },
+				{ label: '是否议价', value: '可小刀', isBadge: true, type: 'green' }
+			],
 			sellerInfo: {
 				name: '阳光小区·小王',
 				avatar: '/static/logo.png',
@@ -287,13 +317,20 @@ export default {
 				{
 					userName: '小李子',
 					rating: 5,
-					content: '卖家超级好！东西和描述一样，发货也快，强烈推荐！'
+					content: '卖家超级好！东西和描述完全一样，发货也快，强烈推荐！注意了注意事项！'
 				},
 				{
 					userName: '蓝天白云',
 					rating: 5,
-					content: '成色真的很新，很满意！价格公道！'
+					content: '成色真的很新，很满意！价格公道，下次还来！'
 				}
+			],
+			// 卖家在售商品
+			sellerGoods: [
+				{ id: 1, name: 'iPhone 14 Pro 256GB', price: '5,200', image: '/static/image/phone.png', bgColor: 'linear-gradient(135deg, #FFE5E5 0%, #FFF0E5 100%)' },
+				{ id: 2, name: '机械键盘 HHKB 2', price: '320', image: '/static/logo.png', bgColor: 'linear-gradient(135deg, #FFF0F5 0%, #FFE4E1 100%)' },
+				{ id: 3, name: 'AirPods Pro 2代', price: '1,100', image: '/static/logo.png', bgColor: 'linear-gradient(135deg, #E8F5E9 0%, #E0F2F1 100%)' },
+				{ id: 4, name: 'Sony A6400 套机', price: '4,200', image: '/static/logo.png', bgColor: 'linear-gradient(135deg, #FFF3E0 0%, #FFECB3 100%)' }
 			],
 			commentList: [
 				{
@@ -436,15 +473,15 @@ export default {
 				url: `/package/pages/chat/chat?shopId=shop_${this.auctionDetail.userId || 'demo_shop'}&shopName=${encodeURIComponent(this.sellerInfo.name)}&goodsId=${this.auctionId || 'mock_1'}`
 			})
 		},
+		viewGoodsDetail(goods) {
+			this.$utils.toast(`查看商品: ${goods.name}`)
+		},
 		likeComment(comment) {
 			comment.isLiked = !comment.isLiked
 			comment.likes = comment.isLiked ? comment.likes + 1 : comment.likes - 1
 		},
 		replyComment(comment) {
 			this.$utils.toast('回复功能开发中')
-		},
-		focusCommentInput() {
-			this.showCommentPopup()
 		},
 		showCommentPopup() {
 			uni.showModal({
@@ -482,7 +519,9 @@ export default {
 			}
 		},
 		goToSellerHome() {
-			this.$utils.toast('卖家主页开发中')
+			uni.navigateTo({
+				url: '/package/pages/index/seller-detail'
+			})
 		},
 		goToWantList() {
 			this.$utils.toast('想买列表开发中')
@@ -491,19 +530,27 @@ export default {
 			this.$utils.toast('收藏列表开发中')
 		},
 		goToSellerOnSale() {
-			this.$utils.toast('在售商品开发中')
+			uni.navigateTo({
+				url: '/package/pages/index/seller-detail?tab=sale'
+			})
 		},
 		goToSellerSold() {
-			this.$utils.toast('已售商品开发中')
+			uni.navigateTo({
+				url: '/package/pages/index/seller-detail?tab=sold'
+			})
 		},
 		goToSellerFans() {
-			this.$utils.toast('粉丝列表开发中')
+			uni.navigateTo({
+				url: '/package/pages/index/seller-detail?tab=fans'
+			})
 		},
 		goToAllReviews() {
 			this.$utils.toast('全部评价开发中')
 		},
 		goToSellerAllGoods() {
-			this.$utils.toast('全部宝贝开发中')
+			uni.navigateTo({
+				url: '/package/pages/index/seller-detail?tab=sale'
+			})
 		}
 	}
 }
@@ -514,7 +561,7 @@ export default {
 	padding-bottom: 0;
 	background-color: #f8f8f8;
 	min-height: 100vh;
-	padding-bottom: 200rpx;
+	padding-bottom: 120rpx;
 }
 
 .section-title {
@@ -539,7 +586,7 @@ export default {
 /* 图片轮播区域 */
 .image-section {
 	height: 500rpx;
-	background: linear-gradient(180deg, #B8E6C8 0%, #FFF8F0 100%);
+	background: linear-gradient(180deg, #FF8C70 0%, #FFF8F0 100%);
 	position: relative;
 
 	.swiper {
@@ -615,7 +662,7 @@ export default {
 	}
 
 	.condition-tag {
-		background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+		background: linear-gradient(135deg, #FF8C70 0%, #FF6B6B 100%);
 		padding: 8rpx 20rpx;
 		border-radius: 20rpx;
 		
@@ -634,12 +681,34 @@ export default {
 		margin-bottom: 20rpx;
 	}
 
+	/* 标签区域 */
+	.tags-section {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12rpx;
+		margin-bottom: 20rpx;
+
+		.tag-item {
+			display: flex;
+			align-items: center;
+			gap: 6rpx;
+			padding: 8rpx 16rpx;
+			background-color: #f5f5f5;
+			border-radius: 16rpx;
+
+			text {
+				font-size: 22rpx;
+				color: #666;
+			}
+		}
+	}
+
 	.meta-row {
 		display: flex;
 		align-items: center;
 		gap: 24rpx;
-		padding-bottom: 24rpx;
-		border-bottom: 1rpx solid #f0f0f0;
+		padding-top: 20rpx;
+		border-top: 1rpx solid #f0f0f0;
 
 		.meta-item {
 			display: flex;
@@ -647,30 +716,6 @@ export default {
 			gap: 6rpx;
 			font-size: 24rpx;
 			color: #999;
-		}
-	}
-
-	.stats-row {
-		display: flex;
-		justify-content: space-around;
-		padding-top: 24rpx;
-
-		.stat-item {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			gap: 8rpx;
-
-			.stat-num {
-				font-size: 36rpx;
-				color: #333;
-				font-weight: 600;
-			}
-
-			.stat-label {
-				font-size: 24rpx;
-				color: #999;
-			}
 		}
 	}
 }
@@ -690,12 +735,13 @@ export default {
 		margin-bottom: 24rpx;
 	}
 	
-	.attr-list {
+	/* 属性区域 */
+	.attr-section {
 		background-color: #fafafa;
 		border-radius: 16rpx;
-		padding: 8rpx 20rpx;
+		padding: 8rpx 24rpx;
 		
-		.attr-item {
+		.attr-row {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
@@ -711,18 +757,17 @@ export default {
 				color: #999;
 			}
 			
-			.attr-text {
-				font-size: 28rpx;
-				color: #333;
-				font-weight: 500;
-			}
-			
 			.attr-value {
 				display: flex;
 				align-items: center;
 				
-				.value-badge {
-					background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+				.attr-text {
+					font-size: 28rpx;
+					color: #333;
+					font-weight: 500;
+				}
+				
+				.attr-badge {
 					padding: 6rpx 20rpx;
 					border-radius: 16rpx;
 					
@@ -730,6 +775,10 @@ export default {
 						font-size: 22rpx;
 						color: #fff;
 						font-weight: 500;
+					}
+					
+					&.gold {
+						background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
 					}
 					
 					&.green {
@@ -744,29 +793,31 @@ export default {
 /* 卖家详情卡片 */
 .seller-card {
 	margin: 0 20rpx 20rpx;
-	padding: 30rpx;
 	background-color: #fff;
 	border-radius: 24rpx;
+	overflow: hidden;
 
-	.seller-header {
+	.seller-header-bg {
+		background: linear-gradient(135deg, #FF8C70 0%, #FF6B6B 100%);
+		padding: 30rpx;
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: space-between;
-		margin-bottom: 24rpx;
 	}
 
 	.seller-info {
 		display: flex;
-		align-items: center;
-		gap: 16rpx;
+		align-items: flex-start;
+		gap: 20rpx;
 	}
 
 	.seller-avatar {
-		width: 88rpx;
-		height: 88rpx;
+		width: 100rpx;
+		height: 100rpx;
 		border-radius: 50%;
 		overflow: hidden;
-		background: linear-gradient(135deg, #FF8C70 0%, #FF6B6B 100%);
+		border: 4rpx solid rgba(255, 255, 255, 0.3);
+		flex-shrink: 0;
 		
 		image {
 			width: 100%;
@@ -775,70 +826,99 @@ export default {
 	}
 
 	.seller-detail {
+		flex: 1;
+		
 		.seller-name-row {
-			display: flex;
-			align-items: center;
-			gap: 12rpx;
-			margin-bottom: 4rpx;
+			margin-bottom: 8rpx;
 			
 			.seller-name {
-				font-size: 30rpx;
-				color: #333;
+				font-size: 32rpx;
+				color: #fff;
 				font-weight: 600;
 			}
+		}
+		
+		.verify-tags {
+			display: flex;
+			gap: 8rpx;
+			margin-bottom: 12rpx;
 			
-			.verify-tags {
+			.verify-tag {
 				display: flex;
-				gap: 8rpx;
+				align-items: center;
+				gap: 4rpx;
+				background: rgba(255, 255, 255, 0.2);
+				padding: 4rpx 12rpx;
+				border-radius: 8rpx;
 				
-				.verify-tag {
-					display: flex;
-					align-items: center;
-					gap: 4rpx;
-					background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-					padding: 4rpx 12rpx;
-					border-radius: 8rpx;
-					
-					text {
-						font-size: 18rpx;
-						color: #fff;
-					}
-					
-					&.credit {
-						background: linear-gradient(135deg, #FAAD14 0%, #FFC53D 100%);
-					}
+				text {
+					font-size: 18rpx;
+					color: #fff;
 				}
+				
+				&.credit {
+					background: rgba(255, 215, 0, 0.3);
+				}
+			}
+		}
+		
+		.seller-rating {
+			display: flex;
+			align-items: center;
+			gap: 8rpx;
+			
+			.rating-num {
+				font-size: 36rpx;
+				color: #fff;
+				font-weight: 700;
+			}
+			
+			.stars {
+				display: flex;
+				gap: 2rpx;
+			}
+			
+			.rating-desc {
+				font-size: 22rpx;
+				color: rgba(255, 255, 255, 0.9);
 			}
 		}
 	}
 
-	.follow-btn {
-		background: linear-gradient(135deg, #FF8C70 0%, #FF6B6B 100%);
-		padding: 12rpx 32rpx;
-		border-radius: 24rpx;
-		
-		text {
-			font-size: 26rpx;
-			color: #fff;
-			font-weight: 500;
-		}
-		
-		&.followed {
-			background: #f5f5f5;
+	.seller-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 12rpx;
+
+		.action-btn {
+			width: 64rpx;
+			height: 64rpx;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 			
-			text {
-				color: #999;
+			&.message-btn {
+				background: rgba(255, 255, 255, 0.2);
+			}
+			
+			&.follow-btn {
+				background: #fff;
+				
+				&.followed {
+					background: #f5f5f5;
+				}
 			}
 		}
 	}
 
 	.seller-stats {
 		display: flex;
+		align-items: center;
 		justify-content: space-around;
-		padding: 20rpx 0;
-		border-top: 1rpx solid #f0f0f0;
+		padding: 24rpx 0;
+		margin: 0 30rpx;
 		border-bottom: 1rpx solid #f0f0f0;
-		margin-bottom: 24rpx;
 
 		.stat-item {
 			display: flex;
@@ -847,42 +927,65 @@ export default {
 			gap: 4rpx;
 
 			.stat-num {
-				font-size: 32rpx;
+				font-size: 36rpx;
 				color: #333;
-				font-weight: 600;
+				font-weight: 700;
 			}
 
 			.stat-label {
-				font-size: 22rpx;
+				font-size: 24rpx;
 				color: #999;
 			}
 		}
+		
+		.stat-divider {
+			width: 1rpx;
+			height: 40rpx;
+			background-color: #e8e8e8;
+		}
 	}
 
+	/* 评价区域 */
 	.reviews-section {
-		margin-bottom: 24rpx;
+		padding: 24rpx 30rpx;
+		border-bottom: 16rpx solid #f8f8f8;
 
 		.section-header {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
 			margin-bottom: 20rpx;
 			
-			.section-title {
-				margin-bottom: 0;
-				font-size: 28rpx;
-				color: #333;
-				font-weight: 600;
+			.section-title-wrap {
+				display: flex;
+				align-items: baseline;
+				gap: 8rpx;
+				margin-bottom: 16rpx;
+				
+				.section-title {
+					font-size: 28rpx;
+					color: #333;
+					font-weight: 600;
+					margin-bottom: 0;
+				}
+				
+				.section-count {
+					font-size: 22rpx;
+					color: #999;
+				}
 			}
 			
-			.view-all {
+			.section-tabs {
 				display: flex;
-				align-items: center;
-				gap: 4rpx;
+				gap: 16rpx;
 				
-				text {
+				.tab-item {
 					font-size: 24rpx;
 					color: #999;
+					padding: 6rpx 16rpx;
+					border-radius: 16rpx;
+					
+					&.active {
+						background-color: #FFF5F2;
+						color: #FF6B6B;
+					}
 				}
 			}
 		}
@@ -905,15 +1008,43 @@ export default {
 					gap: 12rpx;
 					margin-bottom: 12rpx;
 					
-					.reviewer-name {
-						font-size: 26rpx;
-						color: #666;
-						font-weight: 500;
+					.reviewer-avatar {
+						width: 56rpx;
+						height: 56rpx;
+						border-radius: 50%;
+						background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						
+						text {
+							color: #fff;
+							font-size: 24rpx;
+							font-weight: 500;
+						}
 					}
 					
-					.stars {
+					.reviewer-detail {
+						flex: 1;
 						display: flex;
-						gap: 2rpx;
+						flex-direction: column;
+						gap: 4rpx;
+						
+						.reviewer-name {
+							font-size: 26rpx;
+							color: #333;
+							font-weight: 500;
+						}
+						
+						.stars {
+							display: flex;
+							gap: 2rpx;
+						}
+					}
+					
+					.review-time {
+						font-size: 22rpx;
+						color: #999;
 					}
 				}
 
@@ -926,17 +1057,92 @@ export default {
 		}
 	}
 
-	.more-goods {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 20rpx;
-		background-color: #fafafa;
-		border-radius: 16rpx;
+	/* 在售商品区域 */
+	.goods-section {
+		padding: 24rpx 30rpx;
 
-		.more-text {
-			font-size: 26rpx;
-			color: #666;
+		.section-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20rpx;
+			
+			.section-title {
+				font-size: 28rpx;
+				color: #333;
+				font-weight: 600;
+				margin-bottom: 0;
+			}
+			
+			.view-all {
+				display: flex;
+				align-items: center;
+				gap: 4rpx;
+				
+				text {
+					font-size: 24rpx;
+					color: #999;
+				}
+			}
+		}
+
+		.goods-grid {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 16rpx;
+
+			.goods-item {
+				width: calc(50% - 8rpx);
+				background-color: #fff;
+				border-radius: 16rpx;
+				overflow: hidden;
+				border: 1rpx solid #f0f0f0;
+
+				.goods-image {
+					width: 100%;
+					height: 200rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					
+					image {
+						width: 140rpx;
+						height: 140rpx;
+					}
+				}
+
+				.goods-info {
+					padding: 12rpx;
+					
+					.goods-name {
+						font-size: 24rpx;
+						color: #333;
+						font-weight: 500;
+						display: -webkit-box;
+						-webkit-line-clamp: 1;
+						-webkit-box-orient: vertical;
+						overflow: hidden;
+						margin-bottom: 8rpx;
+					}
+					
+					.goods-price {
+						display: flex;
+						align-items: baseline;
+						
+						.price-symbol {
+							font-size: 20rpx;
+							color: #ff4d4f;
+							font-weight: 600;
+						}
+						
+						.price-num {
+							font-size: 28rpx;
+							color: #ff4d4f;
+							font-weight: 700;
+						}
+					}
+				}
+			}
 		}
 	}
 }
@@ -947,6 +1153,47 @@ export default {
 	padding: 30rpx;
 	background-color: #fff;
 	border-radius: 24rpx;
+
+	/* 留言输入框 */
+	.comment-input-wrap {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+		padding: 16rpx 20rpx;
+		background-color: #fafafa;
+		border-radius: 40rpx;
+		margin-bottom: 24rpx;
+
+		.avatar-small {
+			width: 48rpx;
+			height: 48rpx;
+			border-radius: 50%;
+			background-color: #f5f5f5;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			
+			text {
+				font-size: 28rpx;
+			}
+		}
+
+		.input-placeholder {
+			flex: 1;
+			font-size: 26rpx;
+			color: #bbb;
+		}
+
+		.send-btn {
+			width: 56rpx;
+			height: 56rpx;
+			border-radius: 50%;
+			background: linear-gradient(135deg, #FF6B6B 0%, #FF8C70 100%);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+	}
 
 	.comment-list {
 		.comment-item {
@@ -1040,7 +1287,7 @@ export default {
 
 /* 底部操作栏 */
 .safe-bottom-placeholder {
-	height: calc(120rpx + env(safe-area-inset-bottom));
+	height: calc(100rpx + env(safe-area-inset-bottom));
 }
 
 .footer-bar {
@@ -1090,60 +1337,6 @@ export default {
 			background: linear-gradient(135deg, #FF6B6B 0%, #FF8C70 100%);
 			border: none;
 		}
-	}
-}
-
-/* 悬浮输入框 */
-.input-bar {
-	position: fixed;
-	bottom: 120rpx;
-	left: 20rpx;
-	right: 20rpx;
-	display: flex;
-	align-items: center;
-	gap: 16rpx;
-	z-index: 99;
-	padding-bottom: env(safe-area-inset-bottom);
-
-	.input-wrapper {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		gap: 12rpx;
-		background-color: #fff;
-		border-radius: 40rpx;
-		padding: 16rpx 24rpx;
-		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
-
-		.avatar-small {
-			width: 56rpx;
-			height: 56rpx;
-			border-radius: 50%;
-			background-color: #f5f5f5;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			
-			text {
-				font-size: 32rpx;
-			}
-		}
-
-		.input-placeholder {
-			font-size: 26rpx;
-			color: #bbb;
-		}
-	}
-
-	.send-btn {
-		width: 80rpx;
-		height: 80rpx;
-		border-radius: 50%;
-		background: linear-gradient(135deg, #FF6B6B 0%, #FF8C70 100%);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.3);
 	}
 }
 </style>

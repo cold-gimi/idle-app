@@ -78,6 +78,12 @@
           }
         },
         {
+          "path": "pages/index/seller-detail",
+          "style": {
+            "navigationBarTitleText": "商家详情"
+          }
+        },
+        {
           "path": "pages/chat/chat",
           "style": {
             "navigationBarTitleText": "",
