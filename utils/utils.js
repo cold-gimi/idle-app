@@ -176,6 +176,13 @@ const utils = {
     var method = options.method || options.type || "GET"
     var data = options.data || null
     var url = NAMEPATH[options.url] || options.url
+    
+    // 自动显示loading（除非明确指定不显示）
+    const showLoading = options.showLoading !== false
+    if (showLoading) {
+      utils.showLoading(options.loadingText || "数据加载中")
+    }
+    
     return new Promise((resolve, reject) => {
       // 返回Promise, 支持async await写法
       // 同样支持链式调用
@@ -186,11 +193,17 @@ const utils = {
         data,
         success: (result) => {
           console.log('result', result)
+          if (showLoading) {
+            utils.hideLoading()
+          }
+          
+          // 网络请求成功，但需要检查业务状态
           if (result && result.data) {
             const res = result.data
-            if (res.success === false) {
-              if (res.data === -400) {
-                // token过期
+            // 业务错误处理
+            if (res.success === false || (res.code !== undefined && res.code !== 0 && res.code !== 200)) {
+              // token过期处理
+              if (res.data === -400 || res.code === 401) {
                 utils.login({
                   success: async () => {
                     let res = await utils.request(options)
@@ -200,35 +213,67 @@ const utils = {
                 })
                 return
               }
+              
+              // 其他业务错误
+              const errorMsg = res.message || res.msg || "请求失败，请稍后重试"
               uni.showToast({
-                title: res.message,
+                title: errorMsg,
                 mask: true,
                 icon: "none",
                 position: "bottom",
               })
-              reject(new Error(res.message))
+              reject(new Error(errorMsg))
               return
             }
           }
+          
+          // 检查HTTP状态码
+          if (result.statusCode && result.statusCode !== 200 && result.statusCode !== 201) {
+            const errorMsg = `请求失败，状态码：${result.statusCode}`
+            uni.showToast({
+              title: errorMsg,
+              mask: true,
+              icon: "none",
+              position: "bottom",
+            })
+            reject(new Error(errorMsg))
+            return
+          }
+          
           var successCallback = options.success || null;
           if (typeof successCallback === "function") {
             successCallback(result.data, result.header, result)
           }
           resolve(result.data, result.header, result)
         },
-        error: (error) => {
-          console.error(error)
+        fail: (error) => {
+          console.error('请求失败:', error)
+          if (showLoading) {
+            utils.hideLoading()
+          }
+          
+          // 网络错误处理
+          let errorMsg = "网络请求失败，请检查网络连接"
+          if (error.errMsg) {
+            if (error.errMsg.includes('timeout')) {
+              errorMsg = "请求超时，请稍后再试"
+            } else if (error.errMsg.includes('fail')) {
+              errorMsg = "网络连接失败，请检查网络"
+            }
+          }
+          
           uni.showToast({
-            title: "请求超时，请稍后再试",
+            title: errorMsg,
             mask: true,
             icon: "none",
             position: "bottom",
           })
+          
           var errorCallback = options.fail || null;
           if (typeof errorCallback === "function") {
             errorCallback(error)
           }
-          reject(error)
+          reject(new Error(errorMsg))
         },
       })
     })
@@ -472,6 +517,72 @@ const utils = {
     }
     const years = Math.floor(months / 12)
     return `${years}年前`
+  },
+  
+  // 商品数据配置常量
+  GOODS_CONFIG: {
+    colors: ['#E8EAF6', '#F3E5F5', '#E0F2F1', '#FFF3E0', '#ECEFF1', '#FBE9E7'],
+    iconColors: ['#5C6BC0', '#AB47BC', '#26A69A', '#FF7043', '#78909C', '#FF8A65'],
+    avatarColors: ['#7468D7', '#ff6b9d', '#54a0ff', '#FF6B35'],
+    icons: ['photo', 'home-fill', 'file-text-fill', 'grid-fill', 'setting-fill', 'heart-fill'],
+    distances: ['50m', '120m', '200m', '350m', '500m', '800m', '1.2km', '2km']
+  },
+  
+  // 格式化单个商品数据
+  formatGoodsItem: function(item) {
+    const config = this.GOODS_CONFIG
+    const randomIndex = (item.id || 0) % 6
+    const randomAvatarIndex = (item.id || 0) % 4
+    
+    return {
+      id: item.id,
+      title: item.title || item.name || '商品',
+      price: item.price !== undefined ? this.formatPriceWithComma(item.price) : '0',
+      bgColor: config.colors[randomIndex],
+      icon: config.icons[randomIndex],
+      iconColor: config.iconColors[randomIndex],
+      iconSize: 80,
+      imgHeight: 300 + Math.random() * 80,
+      tag: item.status === 'urgent' ? '急出' : (item.isNew ? '全新' : ''),
+      distance: item.distance || config.distances[Math.floor(Math.random() * config.distances.length)],
+      time: this.getTimeAgo(item.createTime || Date.now()),
+      avatarColor: config.avatarColors[randomAvatarIndex],
+      image: item.image || item.coverImage || '',
+      category: item.category || '',
+      location: item.location || ''
+    }
+  },
+  
+  // 格式化商品列表数据（统一封装处理）
+  formatGoodsList: function(response) {
+    if (!response) {
+      return {
+        list: [],
+        total: 0,
+        hasMore: false
+      }
+    }
+    
+    const data = response.data || response
+    const rawList = data.list || data || []
+    const total = data.total || rawList.length
+    
+    const formattedList = rawList.map(item => this.formatGoodsItem(item))
+    
+    return {
+      list: formattedList,
+      total: total,
+      hasMore: formattedList.length < total
+    }
+  },
+  
+  // 获取分页请求参数（统一封装）
+  getPaginationParams: function(page = 1, pageSize = 10, extraParams = {}) {
+    return {
+      page: page,
+      pageSize: pageSize,
+      ...extraParams
+    }
   }
 };
 

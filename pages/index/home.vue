@@ -148,6 +148,7 @@
 			class="goods-scroll"
 			scroll-y
 			@scrolltolower="loadMore"
+			v-if="goodsList.length > 0 || isLoading"
 		>
 		<u-waterfall v-model="goodsList" class="waterfall-wrap">
 			<template v-slot:left="{ leftList }">
@@ -213,6 +214,14 @@
 			</template>
 		</u-waterfall>
 		</scroll-view>
+		
+		<!-- 空数据展示 -->
+		<cp-nodata 
+			v-else-if="!isLoading && goodsList.length === 0" 
+			mode="data" 
+			text="暂无商品，快来发布第一个吧~"
+			top="40%"
+		></cp-nodata>
 
 		<!-- 加载更多 -->
 		<u-loadmore :status="loadStatus" @loadmore="loadMore" margin-top="30" margin-bottom="30"></u-loadmore>
@@ -275,6 +284,7 @@ export default {
 			loadStatus: 'loadmore',
 			page: 1,
 			pageSize: 10,
+			isLoading: false,
 			btnLeft: 0,
 			btnTop: 0,
 			btnSize: 100,
@@ -330,79 +340,54 @@ export default {
 			this.loadGoods()
 		},
 		async loadGoods() {
+			if (this.isLoading) return
+			
+			this.isLoading = true
+			
 			try {
-				this.$utils.showLoading()
-				const params = {
-					page: this.page,
-					pageSize: this.pageSize
-				}
+				const extraParams = {}
 				if (this.keyword) {
-					params.name = this.keyword
+					extraParams.name = this.keyword
 				}
 				if (this.filterCategories[this.filterCurrentCat] && this.filterCurrentCat > 0) {
-					params.category = this.filterCategories[this.filterCurrentCat].name
+					extraParams.category = this.filterCategories[this.filterCurrentCat].name
 				}
 				if (this.minPrice !== '') {
-					params.minPrice = this.minPrice
+					extraParams.minPrice = this.minPrice
 				}
 				if (this.maxPrice !== '') {
-					params.maxPrice = this.maxPrice
+					extraParams.maxPrice = this.maxPrice
 				}
+				
+				const params = this.$utils.getPaginationParams(this.page, this.pageSize, extraParams)
+				
 				const res = await this.$utils.request({
 					url: '/api/v1/public/products',
 					method: 'GET',
 					noToken: true,
-					data: params
+					data: params,
+					loadingText: '加载商品中...'
 				})
-				this.$utils.hideLoading()
-				if (res && res.data) {
-					const list = res.data.list || res.data || []
-					const formattedList = list.map(item => this.formatGoodsItem(item))
-					if (this.page === 1) {
-						this.goodsList = formattedList
-					} else {
-						this.goodsList = [...this.goodsList, ...formattedList]
-					}
-					this.total = res.data.total || list.length
-					if (this.goodsList.length >= this.total) {
-						this.loadStatus = 'nomore'
-					} else {
-						this.loadStatus = 'loadmore'
-					}
+				
+				const goodsData = this.$utils.formatGoodsList(res)
+				
+				if (this.page === 1) {
+					this.goodsList = goodsData.list
+				} else {
+					this.goodsList = [...this.goodsList, ...goodsData.list]
 				}
+				
+				this.total = goodsData.total
+				this.loadStatus = goodsData.hasMore ? 'loadmore' : 'nomore'
+				
 			} catch (error) {
-				this.$utils.hideLoading()
 				console.error('加载商品列表失败:', error)
+				if (this.page > 1) {
+					this.page--
+				}
+			} finally {
+				this.isLoading = false
 			}
-		},
-		formatGoodsItem(item) {
-			const colors = ['#E8EAF6', '#F3E5F5', '#E0F2F1', '#FFF3E0', '#ECEFF1', '#FBE9E7']
-			const iconColors = ['#5C6BC0', '#AB47BC', '#26A69A', '#FF7043', '#78909C', '#FF8A65']
-			const avatarColors = ['#7468D7', '#ff6b9d', '#54a0ff', '#FF6B35']
-			const icons = ['photo', 'home-fill', 'file-text-fill', 'grid-fill', 'setting-fill', 'heart-fill']
-			const randomIndex = item.id % 6
-			const randomAvatarIndex = item.id % 4
-			return {
-				id: item.id,
-				title: item.title || item.name || '商品',
-				price: item.price !== undefined ? this.$utils.formatPriceWithComma(item.price) : '0',
-				bgColor: colors[randomIndex],
-				icon: icons[randomIndex],
-				iconColor: iconColors[randomIndex],
-				iconSize: 80,
-				imgHeight: 300 + Math.random() * 80,
-				tag: item.status === 'urgent' ? '急出' : (item.isNew ? '全新' : ''),
-				distance: item.distance || this.getRandomDistance(),
-				time: this.$utils.getTimeAgo(item.createTime || Date.now()),
-				avatarColor: avatarColors[randomAvatarIndex],
-				image: item.image || item.coverImage || '',
-				category: item.category || '',
-				location: item.location || ''
-			}
-		},
-		getRandomDistance() {
-			const distances = ['50m', '120m', '200m', '350m', '500m', '800m', '1.2km', '2km']
-			return distances[Math.floor(Math.random() * distances.length)]
 		},
 		removeFilter(index) {
 			this.filters.splice(index, 1)
