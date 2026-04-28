@@ -1,6 +1,6 @@
 import store from "./store";
 import NAMEPATH from "./namepath"
-const baseUrlTarget = 'http://localhost:8080'
+const baseUrlTarget = 'http://localhost:3000'
 const utils = {
   longLogin() {
     return new Promise((resolve, reject) => {
