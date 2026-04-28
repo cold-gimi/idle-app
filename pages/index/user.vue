@@ -166,7 +166,7 @@
 		methods: {
 			goToCollection() {
 				uni.navigateTo({
-					url: '/pages/user/collection'
+					url: '/package/pages/user/collection'
 				})
 			},
 			goToFootprint() {
