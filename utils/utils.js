@@ -1,5 +1,6 @@
 import store from "./store";
 import NAMEPATH from "./namepath"
+const baseUrlTarget = 'http://localhost:3000'
 const utils = {
   longLogin() {
     return new Promise((resolve, reject) => {
@@ -148,6 +149,20 @@ const utils = {
       title,
     });
   },
+  upload: function (options) {
+    // Mock 实现：直接返回本地路径作为上传后的 URL
+    return new Promise((resolve) => {
+      console.log('Mock 上传中...', options.filePath);
+      setTimeout(() => {
+        resolve({
+          success: true,
+          data: {
+            url: options.filePath // Mock 返回本地路径
+          }
+        });
+      }, 1000);
+    });
+  },
   request: function (options) {
     var headers = {}
     for (var i in options.headers || {}) {
@@ -283,6 +298,181 @@ const utils = {
           return '';
       }
   },
+  validateBidPrice: function(price, currentPrice, increment = 1) {
+    if (!price || isNaN(price)) {
+      return false
+    }
+    const bidPrice = Number(price)
+    const currPrice = Number(currentPrice)
+    const inc = Number(increment)
+    if (bidPrice <= currPrice) {
+      return false
+    }
+    const minBid = currPrice + inc
+    if (bidPrice < minBid) {
+      return false
+    }
+    if (bidPrice > 99999999) {
+      return false
+    }
+    return true
+  },
+  calculateMinBid: function(currentPrice, increment = 1) {
+    return Number(currentPrice) + Number(increment)
+  },
+  formatCountdown: function(seconds) {
+    if (!seconds || seconds <= 0) {
+      return '00:00:00'
+    }
+    const sec = parseInt(seconds)
+    const hours = Math.floor(sec / 3600)
+    const minutes = Math.floor((sec % 3600) / 60)
+    const secs = sec % 60
+    return [
+      hours.toString().padStart(2, '0'),
+      minutes.toString().padStart(2, '0'),
+      secs.toString().padStart(2, '0')
+    ].join(':')
+  },
+  formatCountdownDetail: function(seconds) {
+    if (!seconds || seconds <= 0) {
+      return {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0
+      }
+    }
+    const sec = parseInt(seconds)
+    const days = Math.floor(sec / 86400)
+    const hours = Math.floor((sec % 86400) / 3600)
+    const minutes = Math.floor((sec % 3600) / 60)
+    const secs = sec % 60
+    return {
+      days,
+      hours,
+      minutes,
+      seconds: secs
+    }
+  },
+  getAuctionStatusText: function(status, remainingTime) {
+    if (status === 'ended' || remainingTime <= 0) {
+      return '已结束'
+    }
+    if (status === 'active') {
+      return '拍卖中'
+    }
+    if (status === 'pending') {
+      return '即将开始'
+    }
+    return '未知状态'
+  },
+  getAuctionStatusType: function(status, remainingTime) {
+    if (status === 'ended' || remainingTime <= 0) {
+      return 'info'
+    }
+    if (status === 'active') {
+      return 'error'
+    }
+    if (status === 'pending') {
+      return 'warning'
+    }
+    return 'info'
+  },
+  formatPrice: function(price) {
+    if (price === null || price === undefined) {
+      return '0.00'
+    }
+    const num = Number(price)
+    return num.toFixed(2)
+  },
+  formatPriceWithComma: function(price) {
+    if (price === null || price === undefined) {
+      return '0.00'
+    }
+    const num = Number(price)
+    return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  },
+  validateAuctionEndTime: function(endTime, currentTime = Date.now()) {
+    const end = Number(endTime)
+    const curr = Number(currentTime)
+    return end > curr
+  },
+  getRemainingTime: function(endTime, currentTime = Date.now()) {
+    const end = Number(endTime)
+    const curr = Number(currentTime)
+    const remaining = Math.floor((end - curr) / 1000)
+    return remaining > 0 ? remaining : 0
+  },
+  sortBidHistory: function(bidHistory, order = 'desc') {
+    const history = [...bidHistory]
+    return history.sort((a, b) => {
+      const timeA = Number(a.createTime) || 0
+      const timeB = Number(b.createTime) || 0
+      if (order === 'desc') {
+        return timeB - timeA
+      }
+      return timeA - timeB
+    })
+  },
+  filterMyBids: function(bidHistory, userId) {
+    return bidHistory.filter(bid => bid.userId === userId)
+  },
+  getHighestBid: function(bidHistory) {
+    if (!bidHistory || bidHistory.length === 0) {
+      return null
+    }
+    const successBids = bidHistory.filter(bid => bid.status === 'success')
+    if (successBids.length === 0) {
+      return null
+    }
+    return successBids.reduce((max, bid) => {
+      return Number(bid.price) > Number(max.price) ? bid : max
+    })
+  },
+  isUserHighestBidder: function(bidHistory, userId) {
+    const highestBid = this.getHighestBid(bidHistory)
+    if (!highestBid) {
+      return false
+    }
+    return highestBid.userId === userId
+  },
+  formatBidMessage: function(bid, isSelf = false) {
+    if (isSelf) {
+      return `您出价了 ${this.formatPriceWithComma(bid.price)} 元`
+    }
+    return `${bid.username || '用户'} 出价了 ${this.formatPriceWithComma(bid.price)} 元`
+  },
+  getTimeAgo: function(timestamp) {
+    const now = Date.now()
+    const time = Number(timestamp)
+    const diff = now - time
+    if (diff < 0) {
+      return '刚刚'
+    }
+    const seconds = Math.floor(diff / 1000)
+    if (seconds < 60) {
+      return '刚刚'
+    }
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) {
+      return `${minutes}分钟前`
+    }
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) {
+      return `${hours}小时前`
+    }
+    const days = Math.floor(hours / 24)
+    if (days < 30) {
+      return `${days}天前`
+    }
+    const months = Math.floor(days / 30)
+    if (months < 12) {
+      return `${months}个月前`
+    }
+    const years = Math.floor(months / 12)
+    return `${years}年前`
+  }
 };
 
 export default utils;

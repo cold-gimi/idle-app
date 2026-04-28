@@ -11,15 +11,12 @@
 			<!-- 搜索框 -->
 		</view>
 		<view style="background-color: #ff7a45;padding: 30rpx;">
-			<u-search
-			placeholder="搜索你想要的闲置好物..."
-			v-model="keyword"
-			shape="round"
-			:bg-color="'#fff'"
-			:input-align="'center'"
-			:show-action="false"
-			@search="onSearch"
-		></u-search>
+			<view class="search-box" @click="goSearchPage">
+				<view class="search-content">
+					<u-icon name="search" size="32" color="#999"></u-icon>
+					<text class="search-placeholder">搜索你想要的闲置好物...</text>
+				</view>
+			</view>
 		</view>
 
 		<!-- 分类图标 -->
@@ -273,14 +270,8 @@ export default {
 			filterCondition: 0,
 			distanceList: ['不限', '500米内', '1公里内', '3公里内', '5公里内'],
 			filterDistance: 0,
-			goodsList: [
-				{ id: 1, bgColor: '#E8EAF6', icon: 'photo', iconColor: '#5C6BC0', iconSize: 80, imgHeight: 300, tag: '急出', distance: '120m', title: 'iPhone 14 Pro 256G 暗夜紫 国行在保 原装配件齐全', price: '5,200', time: '10分钟前', avatarColor: '#7468D7' },
-				{ id: 2, bgColor: '#F3E5F5', icon: 'home-fill', iconColor: '#AB47BC', iconSize: 70, imgHeight: 380, tag: '', distance: '350m', title: '宜家单人布艺沙发 几乎全新 搬家急出可小刀', price: '380', time: '25分钟前', avatarColor: '#ff6b9d' },
-				{ id: 3, bgColor: '#E0F2F1', icon: 'file-text-fill', iconColor: '#26A69A', iconSize: 75, imgHeight: 260, tag: '送赠品', distance: '80m', title: '考研英语全套资料 真题+词汇书+手写笔记打包送', price: '0', time: '30分钟前', avatarColor: '#54a0ff' },
-				{ id: 4, bgColor: '#FFF3E0', icon: 'photo', iconColor: '#FF7043', iconSize: 80, imgHeight: 340, tag: '全新', distance: '500m', title: 'MacBook Air M2 星光色 8+256G 未拆封', price: '8,200', time: '1小时前', avatarColor: '#ff6b9d' },
-				{ id: 5, bgColor: '#ECEFF1', icon: 'setting-fill', iconColor: '#78909C', iconSize: 70, imgHeight: 280, tag: '急出', distance: '200m', title: '九阳破壁机 家用多功能 用了两次', price: '199', time: '2小时前', avatarColor: '#7468D7' },
-				{ id: 6, bgColor: '#FBE9E7', icon: 'grid-fill', iconColor: '#FF8A65', iconSize: 75, imgHeight: 320, tag: '', distance: '1.2km', title: '乐高积木 哈利波特系列 完整盒装', price: '450', time: '3小时前', avatarColor: '#54a0ff' }
-			],
+			goodsList: [],
+			total: 0,
 			loadStatus: 'loadmore',
 			page: 1,
 			pageSize: 10,
@@ -301,10 +292,18 @@ export default {
 		const bottomMarginPx = uni.upx2px(this.btnBottomMargin)
 		this.btnLeft = sysInfo.windowWidth - btnSizePx - rightMarginPx
 		this.btnTop = sysInfo.windowHeight - btnSizePx - bottomMarginPx
+		this.loadGoods()
 	},
 	methods: {
 		onSearch(val) {
-			this.$utils.toast(`搜索: ${val}`)
+			if (val && val.trim()) {
+				this.$utils.route('/package/pages/search/search', { keyword: val })
+			} else {
+				this.goSearchPage()
+			}
+		},
+		goSearchPage() {
+			this.$utils.route('/package/pages/search/search')
 		},
 		changeLocation() {
 			this.$utils.toast('切换位置')
@@ -330,11 +329,80 @@ export default {
 			this.page = 1
 			this.loadGoods()
 		},
-		loadGoods() {
-			this.$utils.showLoading()
-			setTimeout(() => {
+		async loadGoods() {
+			try {
+				this.$utils.showLoading()
+				const params = {
+					page: this.page,
+					pageSize: this.pageSize
+				}
+				if (this.keyword) {
+					params.name = this.keyword
+				}
+				if (this.filterCategories[this.filterCurrentCat] && this.filterCurrentCat > 0) {
+					params.category = this.filterCategories[this.filterCurrentCat].name
+				}
+				if (this.minPrice !== '') {
+					params.minPrice = this.minPrice
+				}
+				if (this.maxPrice !== '') {
+					params.maxPrice = this.maxPrice
+				}
+				const res = await this.$utils.request({
+					url: '/api/v1/public/products',
+					method: 'GET',
+					noToken: true,
+					data: params
+				})
 				this.$utils.hideLoading()
-			}, 500)
+				if (res && res.data) {
+					const list = res.data.list || res.data || []
+					const formattedList = list.map(item => this.formatGoodsItem(item))
+					if (this.page === 1) {
+						this.goodsList = formattedList
+					} else {
+						this.goodsList = [...this.goodsList, ...formattedList]
+					}
+					this.total = res.data.total || list.length
+					if (this.goodsList.length >= this.total) {
+						this.loadStatus = 'nomore'
+					} else {
+						this.loadStatus = 'loadmore'
+					}
+				}
+			} catch (error) {
+				this.$utils.hideLoading()
+				console.error('加载商品列表失败:', error)
+			}
+		},
+		formatGoodsItem(item) {
+			const colors = ['#E8EAF6', '#F3E5F5', '#E0F2F1', '#FFF3E0', '#ECEFF1', '#FBE9E7']
+			const iconColors = ['#5C6BC0', '#AB47BC', '#26A69A', '#FF7043', '#78909C', '#FF8A65']
+			const avatarColors = ['#7468D7', '#ff6b9d', '#54a0ff', '#FF6B35']
+			const icons = ['photo', 'home-fill', 'file-text-fill', 'grid-fill', 'setting-fill', 'heart-fill']
+			const randomIndex = item.id % 6
+			const randomAvatarIndex = item.id % 4
+			return {
+				id: item.id,
+				title: item.title || item.name || '商品',
+				price: item.price !== undefined ? this.$utils.formatPriceWithComma(item.price) : '0',
+				bgColor: colors[randomIndex],
+				icon: icons[randomIndex],
+				iconColor: iconColors[randomIndex],
+				iconSize: 80,
+				imgHeight: 300 + Math.random() * 80,
+				tag: item.status === 'urgent' ? '急出' : (item.isNew ? '全新' : ''),
+				distance: item.distance || this.getRandomDistance(),
+				time: this.$utils.getTimeAgo(item.createTime || Date.now()),
+				avatarColor: avatarColors[randomAvatarIndex],
+				image: item.image || item.coverImage || '',
+				category: item.category || '',
+				location: item.location || ''
+			}
+		},
+		getRandomDistance() {
+			const distances = ['50m', '120m', '200m', '350m', '500m', '800m', '1.2km', '2km']
+			return distances[Math.floor(Math.random() * distances.length)]
 		},
 		removeFilter(index) {
 			this.filters.splice(index, 1)
@@ -346,10 +414,12 @@ export default {
 			this.$utils.route('/package/pages/index/detail', { id: item.id })
 		},
 		loadMore() {
+			if (this.loadStatus === 'nomore' || this.loadStatus === 'loading') {
+				return
+			}
 			this.loadStatus = 'loading'
-			setTimeout(() => {
-				this.loadStatus = 'nomore'
-			}, 1000)
+			this.page++
+			this.loadGoods()
 		},
 		touchStart(e) {
 			this.startX = e.touches[0].clientX - this.btnLeft
@@ -399,6 +469,31 @@ export default {
 .header {
 	padding: 0;
 	background: linear-gradient(135deg, #ff7a45 0%, #ff9f7a 100%);
+}
+
+.search-box {
+	background-color: #fff;
+	border-radius: 50rpx;
+	padding: 16rpx 30rpx;
+	display: flex;
+	align-items: center;
+	
+	&:active {
+		background-color: #f5f5f5;
+	}
+}
+
+.search-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	gap: 12rpx;
+}
+
+.search-placeholder {
+	font-size: 28rpx;
+	color: #999;
 }
 
 .category-wrap {
