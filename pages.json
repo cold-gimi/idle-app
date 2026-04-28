@@ -111,6 +111,13 @@
             "navigationBarTitleText": "我的收藏",
             "navigationStyle": "custom"
           }
+        },
+        {
+          "path": "pages/user/footprint",
+          "style": {
+            "navigationBarTitleText": "浏览记录",
+            "navigationStyle": "custom"
+          }
         }
       ]
     }

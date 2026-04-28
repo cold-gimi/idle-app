@@ -171,7 +171,7 @@
 			},
 			goToFootprint() {
 				uni.navigateTo({
-					url: '/pages/user/footprint'
+					url: '/package/pages/user/footprint'
 				})
 			},
 			goToManage() {

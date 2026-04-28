@@ -1,11 +1,11 @@
 <template>
-	<view class="collection-page">
+	<view class="footprint-page">
 		<u-navbar
-			title="我的收藏"
+			title="浏览记录"
 			:is-back="true"
 			back-icon-name="nav-back"
 			back-icon-color="#fff"
-			:background="{ backgroundImage: 'linear-gradient(135deg, #FF8C70 0%, #FF6B6B 50%, #FF7F50 100%)' }"
+			:background="{ backgroundImage: 'linear-gradient(135deg, #9B7BFF 0%, #7B5FFF 50%, #6B4FE8 100%)' }"
 			title-color="#fff"
 			:border-bottom="false"
 		>
@@ -14,12 +14,12 @@
 			</view>
 		</u-navbar>
 		
-		<view class="collection-content">
+		<view class="footprint-content">
 			<view class="edit-bar" v-if="isEditMode && itemList.length > 0">
 				<view class="select-all" @click="toggleSelectAll">
 					<u-icon 
 						:name="isAllSelected ? 'checkbox-mark-circle-fill' : 'checkbox-mark-circle'" 
-						:color="isAllSelected ? '#FF6B35' : '#ccc'" 
+						:color="isAllSelected ? '#9B7BFF' : '#ccc'" 
 						size="40"
 					></u-icon>
 					<text class="select-all-text">全选</text>
@@ -35,7 +35,7 @@
 				</view>
 			</view>
 			
-			<view class="collection-list" v-if="itemList.length > 0">
+			<view class="footprint-list" v-if="itemList.length > 0">
 				<cp-goods-item
 					v-for="(item, index) in itemList" 
 					:key="item.id"
@@ -58,8 +58,8 @@
 				nomore-text="没有更多了"
 			/>
 			
-			<view class="empty-collection" v-else-if="!isLoading">
-				<u-empty mode="list" :icon="'/static/image/phs.png'" text="暂无收藏商品" margin-top="100"></u-empty>
+			<view class="empty-footprint" v-else-if="!isLoading">
+				<u-empty mode="list" :icon="'/static/image/pzs.png'" text="暂无浏览记录" margin-top="100"></u-empty>
 				<view class="browse-btn" @click="goToHome">
 					<u-button type="primary" shape="circle">去逛逛</u-button>
 				</view>
@@ -104,54 +104,64 @@ export default {
 			
 			const mockData = [
 				{
-					id: 1,
-					title: 'iPhone 14 Pro Max 256GB 暗紫色',
-					price: '6,888',
+					id: 101,
+					title: '华为 Mate 60 Pro 512GB 雅丹黑',
+					price: '6,999',
 					image: '/static/logo.png',
 					status: 'active',
-					location: '北京市朝阳区',
-					time: '2小时前',
-					bgColor: '#C9D8FF'
-				},
-				{
-					id: 2,
-					title: 'MacBook Pro 14寸 M2 Pro 芯片',
-					price: '12,500',
-					image: '/static/logo.png',
-					status: 'sold',
-					location: '上海市浦东新区',
-					time: '1天前',
+					location: '北京市海淀区',
+					time: '刚刚',
 					bgColor: '#E8F5E9'
 				},
 				{
-					id: 3,
-					title: 'AirPods Pro 2 代 全新未拆封',
-					price: '1,500',
+					id: 102,
+					title: '小米 14 Ultra 摄影套装版',
+					price: '5,999',
 					image: '/static/logo.png',
 					status: 'active',
-					location: '深圳市南山区',
-					time: '3天前',
+					location: '上海市徐汇区',
+					time: '30分钟前',
 					bgColor: '#FFF3E0'
 				},
 				{
-					id: 4,
-					title: 'Sony WH-1000XM5 头戴式降噪耳机',
-					price: '1,800',
+					id: 103,
+					title: 'OPPO Find X7 Ultra 卫星通话版',
+					price: '6,499',
 					image: '/static/logo.png',
 					status: 'sold',
-					location: '广州市天河区',
-					time: '5天前',
+					location: '广州市越秀区',
+					time: '2小时前',
 					bgColor: '#F3E5F5'
 				},
 				{
-					id: 5,
-					title: 'iPad Air 5 256GB WiFi版',
-					price: '4,200',
+					id: 104,
+					title: 'vivo X100 Pro 蔡司影像',
+					price: '4,999',
 					image: '/static/logo.png',
 					status: 'active',
-					location: '杭州市西湖区',
-					time: '1周前',
+					location: '深圳市福田区',
+					time: '5小时前',
 					bgColor: '#E0F7FA'
+				},
+				{
+					id: 105,
+					title: '三星 Galaxy S24 Ultra AI手机',
+					price: '8,999',
+					image: '/static/logo.png',
+					status: 'active',
+					location: '杭州市余杭区',
+					time: '1天前',
+					bgColor: '#C9D8FF'
+				},
+				{
+					id: 106,
+					title: '一加 12 哈苏全焦段影像',
+					price: '4,299',
+					image: '/static/logo.png',
+					status: 'sold',
+					location: '南京市鼓楼区',
+					time: '2天前',
+					bgColor: '#FFECB3'
 				}
 			];
 			
@@ -188,11 +198,11 @@ export default {
 		}
 	},
 	onLoad() {
-		console.log('我的收藏页面加载');
+		console.log('浏览记录页面加载');
 		this.fetchList();
 	},
 	onShow() {
-		console.log('我的收藏页面显示');
+		console.log('浏览记录页面显示');
 	},
 	onPullDownRefresh() {
 		this.refreshList();
@@ -204,7 +214,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.collection-page {
+.footprint-page {
 	min-height: 100vh;
 	background-color: #f5f5f5;
 }
@@ -219,7 +229,7 @@ export default {
 	}
 }
 
-.collection-content {
+.footprint-content {
 	padding-bottom: 40rpx;
 }
 
@@ -269,11 +279,11 @@ export default {
 	}
 }
 
-.collection-list {
+.footprint-list {
 	padding: 0 20rpx;
 }
 
-.empty-collection {
+.empty-footprint {
 	padding-bottom: 60rpx;
 }
 
