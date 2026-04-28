@@ -16,7 +16,8 @@
     {
       "path": "pages/index/user",
       "style": {
-        "navigationBarTitleText": "个人"
+        "navigationBarTitleText": "个人",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -43,6 +44,13 @@
       "root": "package",
       "pages": [
         {
+          "path": "pages/search/search",
+          "style": {
+            "navigationBarTitleText": "搜索",
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        {
           "path": "pages/position/search",
           "style": {
             "navigationBarTitleText": "搜索",
@@ -65,7 +73,50 @@
         {
           "path": "pages/index/release",
           "style": {
-            "navigationBarTitleText": "发布闲置"
+            "navigationBarTitleText": "发布闲置",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/chat/chat",
+          "style": {
+            "navigationBarTitleText": "",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/user/profile",
+          "style": {
+            "navigationBarTitleText": "个人详情",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/user/article",
+          "style": {
+            "navigationBarTitleText": "文章列表",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/user/article-detail",
+          "style": {
+            "navigationBarTitleText": "文章详情",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/user/collection",
+          "style": {
+            "navigationBarTitleText": "我的收藏",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "pages/user/footprint",
+          "style": {
+            "navigationBarTitleText": "浏览记录",
+            "navigationStyle": "custom"
           }
         }
       ]

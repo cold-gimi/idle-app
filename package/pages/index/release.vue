@@ -4,6 +4,15 @@
 			<cp-login></cp-login>
 		</template>
 		<template v-else>
+			<u-navbar
+				:title="isEdit ? '编辑商品' : '发布闲置'"
+				:is-back="true"
+				back-icon-name="nav-back"
+				back-icon-color="#fff"
+				:background="{ backgroundImage: 'linear-gradient(135deg, #FF8C70 0%, #FF6B6B 50%, #FF7F50 100%)' }"
+				title-color="#fff"
+				:border-bottom="false"
+			></u-navbar>
 			<view class="publish-form">
 				<!-- 图片上传 -->
 				<view class="form-section">
@@ -127,7 +136,7 @@
 			<!-- 底部操作 -->
 			<view class="bottom-actions">
 				<button class="btn-draft" @click="saveDraft">存草稿</button>
-				<button class="btn-publish" @click="publish">立即发布</button>
+				<button class="btn-publish" @click="publish">{{ isEdit ? '保存修改' : '立即发布' }}</button>
 			</view>
 
 			<!-- 分类选择弹窗 -->
@@ -147,6 +156,8 @@
 	export default {
 		data() {
 			return {
+				goodsId: '',
+				isEdit: false,
 				images: [],
 				form: {
 					title: '',
@@ -178,6 +189,52 @@
 			goDraft() {
 				uni.showToast({title: '草稿箱', icon: 'none'});
 			},
+			loadGoodsDetail() {
+				const mockGoods = {
+					'1': {
+						images: ['/static/logo.png'],
+						title: 'iPhone 14 Pro',
+						desc: '几乎全新，购买不到半年，原装配件齐全，包装盒也在。因换新机所以出掉。',
+						category: '数码家电',
+						price: '5200',
+						negotiable: true,
+						condition: '几乎全新',
+						tradeType: 'self',
+						location: '北京市朝阳区'
+					},
+					'2': {
+						images: ['/static/logo.png'],
+						title: '机械键盘 K2',
+						desc: '轻微使用，按键手感良好，无损坏。',
+						category: '数码家电',
+						price: '320',
+						negotiable: false,
+						condition: '轻微使用',
+						tradeType: 'self',
+						location: '上海市浦东新区'
+					},
+					'3': {
+						images: ['/static/logo.png'],
+						title: 'AirPods Pro 2',
+						desc: '几乎全新，使用次数很少，降噪效果很好。',
+						category: '数码家电',
+						price: '1100',
+						negotiable: true,
+						condition: '几乎全新',
+						tradeType: 'self',
+						location: '广州市天河区'
+					}
+				};
+				
+				const goods = mockGoods[this.goodsId];
+				if (goods) {
+					this.images = goods.images;
+					this.form = {
+						...this.form,
+						...goods
+					};
+				}
+			},
 			chooseImage() {
 				const remain = 9 - this.images.length;
 				uni.chooseImage({
@@ -186,6 +243,23 @@
 					sourceType: ['album', 'camera'],
 					success: (res) => {
 						this.images = this.images.concat(res.tempFilePaths);
+					},
+					fail: (err) => {
+						console.error('选择图片失败:', err);
+						if (err.errMsg && (err.errMsg.includes('auth deny') || err.errMsg.includes('authorize:fail'))) {
+							uni.showModal({
+								title: '提示',
+								content: '需要您的相册或相机许可才能选择图片，请前往设置开启',
+								confirmText: '去设置',
+								success: (res) => {
+									if (res.confirm) {
+										uni.openSetting();
+									}
+								}
+							});
+						} else if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+							uni.showToast({title: '选择图片失败', icon: 'none'});
+						}
 					}
 				});
 			},
@@ -265,14 +339,24 @@
 			},
 			publish() {
 				if (!this.validate()) return;
-				uni.showLoading({title: '发布中...'});
+				uni.showLoading({title: this.isEdit ? '保存中...' : '发布中...'});
 				setTimeout(() => {
 					uni.hideLoading();
-					uni.showToast({title: '发布成功', icon: 'success'});
+					uni.showToast({title: this.isEdit ? '保存成功' : '发布成功', icon: 'success'});
 					setTimeout(() => {
 						uni.navigateBack();
 					}, 1500);
 				}, 1500);
+			}
+		},
+		onLoad(options) {
+			if (options.id) {
+				this.goodsId = options.id;
+				this.isEdit = true;
+				this.loadGoodsDetail();
+			}
+			if (options.edit) {
+				this.isEdit = options.edit === 'true';
 			}
 		}
 	};
